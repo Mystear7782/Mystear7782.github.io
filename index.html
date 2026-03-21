@@ -11,240 +11,149 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-/* ===== DESIGN TOKENS ===== */
 :root {
-  --font: 'Noto Sans JP', sans-serif;
-
-  /* Slate Clean — Light / Cool Gray */
-  --bg:         #f5f6f7;
-  --bg2:        #ffffff;
-  --bg3:        #f1f2f4;
-  --surface:    #ffffff;
-  --surface2:   #f9fafb;
-  --border:     #e0e3e8;
-  --border2:    #c8cdd6;
-  --nav-bg:     #1e2130;
-  --nav-text:   #c9d1e0;
-  --nav-active: #6ee7b7;
-  --nav-hover:  rgba(255,255,255,.06);
-  --text:       #111827;
-  --text2:      #374151;
-  --text3:      #6b7280;
-  --accent:     #0ea5e9;
-  --accent-bg:  #e0f2fe;
-  --accent-t:   #0369a1;
-  --green:      #16a34a;
-  --green-bg:   #dcfce7;
-  --green-t:    #14532d;
-  --red:        #dc2626;
-  --red-bg:     #fee2e2;
-  --red-t:      #991b1b;
-  --amber:      #d97706;
-  --amber-bg:   #fef3c7;
-  --amber-t:    #92400e;
-  --purple:     #7c3aed;
-  --purple-bg:  #ede9fe;
-  --purple-t:   #4c1d95;
-  --shadow-xs:  0 1px 2px rgba(17,24,39,.05);
-  --shadow-sm:  0 2px 6px rgba(17,24,39,.07), 0 1px 2px rgba(17,24,39,.04);
-  --shadow:     0 4px 14px rgba(17,24,39,.09), 0 2px 4px rgba(17,24,39,.05);
-  --r:          14px;
-  --r-sm:       10px;
-  --r-xs:       7px;
-  --header-h:   56px;
-  --sw:         268px;
+  --font:'Noto Sans JP',sans-serif;
+  --bg:#f5f6f7;--bg2:#ffffff;--bg3:#f1f2f4;
+  --surface:#ffffff;--surface2:#f9fafb;
+  --border:#e0e3e8;--border2:#c8cdd6;
+  --nav-bg:#1e2130;--nav-text:#c9d1e0;--nav-active:#6ee7b7;--nav-hover:rgba(255,255,255,.06);
+  --text:#111827;--text2:#374151;--text3:#6b7280;
+  --accent:#0ea5e9;--accent-bg:#e0f2fe;--accent-t:#0369a1;
+  --green:#16a34a;--green-bg:#dcfce7;--green-t:#14532d;
+  --red:#dc2626;--red-bg:#fee2e2;--red-t:#991b1b;
+  --amber:#d97706;--amber-bg:#fef3c7;--amber-t:#92400e;
+  --purple:#7c3aed;--purple-bg:#ede9fe;--purple-t:#4c1d95;
+  --shadow-xs:0 1px 2px rgba(17,24,39,.05);
+  --shadow-sm:0 2px 6px rgba(17,24,39,.07),0 1px 2px rgba(17,24,39,.04);
+  --shadow:0 4px 14px rgba(17,24,39,.09),0 2px 4px rgba(17,24,39,.05);
+  --r:14px;--r-sm:10px;--r-xs:7px;--header-h:56px;--sw:268px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:         #0f1117;
-    --bg2:        #1a1d23;
-    --bg3:        #1f2229;
-    --surface:    #1a1d23;
-    --surface2:   #252930;
-    --border:     #252930;
-    --border2:    #333840;
-    --nav-bg:     #0d0f14;
-    --nav-text:   #c9d1e0;
-    --nav-active: #6ee7b7;
-    --nav-hover:  rgba(255,255,255,.05);
-    --text:       #f9fafb;
-    --text2:      #9ca3af;
-    --text3:      #6b7280;
-    --accent:     #38bdf8;
-    --accent-bg:  #0c2d3e;
-    --accent-t:   #7dd3fc;
-    --green:      #4ade80;
-    --green-bg:   #052e16;
-    --green-t:    #86efac;
-    --red:        #f87171;
-    --red-bg:     #450a0a;
-    --red-t:      #fca5a5;
-    --amber:      #fbbf24;
-    --amber-bg:   #1c1001;
-    --amber-t:    #fde68a;
-    --purple:     #a78bfa;
-    --purple-bg:  #1e1b4b;
-    --purple-t:   #c4b5fd;
-    --shadow-xs:  0 1px 2px rgba(0,0,0,.3);
-    --shadow-sm:  0 2px 8px rgba(0,0,0,.35);
-    --shadow:     0 4px 18px rgba(0,0,0,.45);
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1117;--bg2:#1a1d23;--bg3:#1f2229;
+    --surface:#1a1d23;--surface2:#252930;
+    --border:#252930;--border2:#333840;
+    --nav-bg:#0d0f14;--nav-text:#c9d1e0;--nav-active:#6ee7b7;--nav-hover:rgba(255,255,255,.05);
+    --text:#f9fafb;--text2:#9ca3af;--text3:#6b7280;
+    --accent:#38bdf8;--accent-bg:#0c2d3e;--accent-t:#7dd3fc;
+    --green:#4ade80;--green-bg:#052e16;--green-t:#86efac;
+    --red:#f87171;--red-bg:#450a0a;--red-t:#fca5a5;
+    --amber:#fbbf24;--amber-bg:#1c1001;--amber-t:#fde68a;
+    --purple:#a78bfa;--purple-bg:#1e1b4b;--purple-t:#c4b5fd;
+    --shadow-xs:0 1px 2px rgba(0,0,0,.3);
+    --shadow-sm:0 2px 8px rgba(0,0,0,.35);
+    --shadow:0 4px 18px rgba(0,0,0,.45);
   }
 }
-
-/* ===== RESET ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font-family:var(--font);cursor:pointer;border:none;background:none}
 input,select{font-family:var(--font)}
-
-/* ===== APP SHELL ===== */
 #app{height:100%;display:flex;flex-direction:column}
 
-/* ===== HEADER ===== */
-#header{
-  height:var(--header-h);background:var(--nav-bg);
-  display:flex;align-items:center;gap:10px;
-  padding:0 14px;flex-shrink:0;z-index:20;
-  box-shadow:0 1px 0 rgba(255,255,255,.05);
-}
-#hamburger{
-  width:36px;height:36px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:5px;
-  border-radius:var(--r-xs);border:1px solid rgba(255,255,255,.1);
-  background:rgba(255,255,255,.06);flex-shrink:0;transition:background .2s;
-}
+/* HEADER */
+#header{height:var(--header-h);background:var(--nav-bg);display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;z-index:20;box-shadow:0 1px 0 rgba(255,255,255,.05)}
+#hamburger{width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:var(--r-xs);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);flex-shrink:0;transition:background .2s}
 #hamburger:hover{background:rgba(255,255,255,.1)}
 #hamburger span{width:16px;height:1.5px;background:#c9d1e0;border-radius:2px;display:block;transition:all .25s}
 #hamburger.open span:nth-child(1){transform:rotate(45deg) translate(4.5px,4.5px)}
 #hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
 #hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(4.5px,-4.5px)}
-#page-title{font-size:15px;font-weight:700;color:#ffffff;flex:1;letter-spacing:.2px}
+#page-title{font-size:15px;font-weight:700;color:#fff;flex:1;letter-spacing:.2px}
 
-/* ===== SIDEBAR ===== */
-#overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.5);
-  backdrop-filter:blur(4px);z-index:40;
-  opacity:0;pointer-events:none;transition:opacity .25s;
-}
+/* SIDEBAR */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:40;opacity:0;pointer-events:none;transition:opacity .25s}
 #overlay.show{opacity:1;pointer-events:all}
-#sidebar{
-  position:fixed;top:0;left:0;height:100%;
-  width:var(--sw);background:var(--nav-bg);z-index:50;
-  display:flex;flex-direction:column;
-  transform:translateX(-100%);
-  transition:transform .28s cubic-bezier(.4,0,.2,1);
-  box-shadow:var(--shadow);
-}
+#sidebar{position:fixed;top:0;left:0;height:100%;width:var(--sw);background:var(--nav-bg);z-index:50;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow)}
 #sidebar.show{transform:translateX(0)}
 .sb-head{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-logo{font-size:20px;font-weight:700;color:#fff;letter-spacing:-.2px}
+.sb-logo{font-size:20px;font-weight:700;color:#fff}
 .sb-logo span{color:var(--nav-active)}
 .sb-tagline{font-size:11px;color:#4a5270;margin-top:2px;letter-spacing:.5px}
 .sb-nav{flex:1;padding:8px 10px;overflow-y:auto}
 .sb-sec{font-size:10px;font-weight:700;color:#3a4060;letter-spacing:1.5px;text-transform:uppercase;padding:14px 10px 6px}
-.sb-item{
-  display:flex;align-items:center;gap:10px;
-  padding:11px 12px;border-radius:var(--r-sm);
-  color:var(--nav-text);font-size:14px;font-weight:400;
-  cursor:pointer;transition:all .18s;margin-bottom:1px;
-}
+.sb-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--r-sm);color:var(--nav-text);font-size:14px;cursor:pointer;transition:all .18s;margin-bottom:1px}
 .sb-item:hover{background:var(--nav-hover);color:#e8ecf5}
 .sb-item.active{background:rgba(110,231,183,.12);color:var(--nav-active);font-weight:500}
 .sb-item.disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
 .sb-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
-.sb-badge{
-  margin-left:auto;font-size:10px;font-weight:500;
-  background:rgba(255,255,255,.07);color:#4a5270;
-  padding:2px 8px;border-radius:20px;
-}
+.sb-badge{margin-left:auto;font-size:10px;font-weight:500;background:rgba(255,255,255,.07);color:#4a5270;padding:2px 8px;border-radius:20px}
 
-/* ===== CONTENT ===== */
+/* CONTENT */
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg)}
 .page{display:none;padding:16px}
 .page.active{display:block}
 
-/* ===== SECTION HEADER ===== */
+/* ① BACK BUTTON — アイコン付き・押しやすいサイズ */
+.back-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 16px;margin-bottom:16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-sm);color:var(--text2);
+  font-size:14px;font-weight:500;
+  box-shadow:var(--shadow-xs);transition:all .18s;min-height:40px;
+}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:var(--shadow-sm)}
+.back-btn svg{width:16px;height:16px;flex-shrink:0}
+
+/* SEC HEADER */
 .sec-head{margin-bottom:18px}
 .sec-title{font-size:18px;font-weight:700;color:var(--text)}
 .sec-sub{font-size:12px;color:var(--text3);margin-top:3px}
 
-/* ===== CARD ===== */
+/* CARD */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
 .card-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px}
 
-/* ===== FORM ===== */
+/* FORM */
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:7px}
-.form-select,.form-input{
-  width:100%;background:var(--bg3);border:1.5px solid var(--border);
-  color:var(--text);font-family:var(--font);font-size:15px;
-  padding:11px 14px;border-radius:var(--r-sm);appearance:none;
-  outline:none;transition:border-color .18s,box-shadow .18s;
-}
+.form-select,.form-input{width:100%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:15px;padding:11px 14px;border-radius:var(--r-sm);appearance:none;outline:none;transition:border-color .18s,box-shadow .18s}
 .form-select:focus,.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
 .form-input::placeholder{color:var(--text3)}
 .sel-wrap{position:relative}
-.sel-wrap::after{
-  content:'';position:absolute;right:14px;top:50%;transform:translateY(-50%);
-  pointer-events:none;width:0;height:0;
-  border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--text3);
-}
+.sel-wrap::after{content:'';position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--text3)}
 .type-chips{display:flex;gap:8px;flex-wrap:wrap}
-.type-chip{
-  padding:8px 16px;background:var(--bg3);border:1.5px solid var(--border);
-  border-radius:30px;color:var(--text2);font-size:13px;font-weight:500;
-  cursor:pointer;transition:all .18s;
-}
+.type-chip{padding:8px 16px;background:var(--bg3);border:1.5px solid var(--border);border-radius:30px;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;transition:all .18s}
 .type-chip:hover{border-color:var(--accent);color:var(--accent)}
 .type-chip.sel{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-t)}
 
-/* ===== BUTTONS ===== */
-.btn-primary{
-  width:100%;padding:13px;background:var(--accent);border-radius:var(--r-sm);
-  color:#fff;font-size:15px;font-weight:700;transition:all .18s;
-  box-shadow:var(--shadow-xs);
-}
+/* BUTTONS */
+.btn-primary{width:100%;padding:13px;background:var(--accent);border-radius:var(--r-sm);color:#fff;font-size:15px;font-weight:700;transition:all .18s;box-shadow:var(--shadow-xs)}
 .btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:var(--shadow-sm)}
 .btn-primary:active{transform:translateY(0)}
 .btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-secondary{
-  flex:1;padding:11px;background:var(--surface);border:1.5px solid var(--border);
-  border-radius:var(--r-sm);color:var(--text);font-size:14px;font-weight:500;transition:all .18s;
-}
+.btn-secondary{flex:1;padding:11px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:14px;font-weight:500;transition:all .18s}
 .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
-.btn-ghost{
-  display:inline-flex;align-items:center;gap:5px;
-  color:var(--text2);font-size:13px;font-weight:500;padding:4px 0;
-  background:none;border:none;transition:color .18s;
-}
-.btn-ghost:hover{color:var(--accent)}
 .btn-row{display:flex;gap:10px;margin-bottom:14px}
 
-/* ===== TAGS ===== */
+/* TAGS */
 .tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.3px;display:inline-block}
-.tag-machine {background:var(--purple-bg);color:var(--purple-t)}
-.tag-free    {background:var(--accent-bg); color:var(--accent-t)}
-.tag-body    {background:var(--green-bg);  color:var(--green-t)}
-.tag-cardio  {background:var(--amber-bg);  color:var(--amber-t)}
+.tag-machine{background:var(--purple-bg);color:var(--purple-t)}
+.tag-free{background:var(--accent-bg);color:var(--accent-t)}
+.tag-body{background:var(--green-bg);color:var(--green-t)}
+.tag-cardio{background:var(--amber-bg);color:var(--amber-t)}
+.tag-archived{background:var(--amber-bg);color:var(--amber-t)}
 
-/* ===== MENU LIST ===== */
+/* MENU LIST */
+.list-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}
+.toggle-archive-btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text3);padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);transition:all .18s;cursor:pointer}
+.toggle-archive-btn:hover{border-color:var(--amber);color:var(--amber)}
+.toggle-archive-btn.on{border-color:var(--amber);color:var(--amber-t);background:var(--amber-bg)}
+.toggle-archive-btn svg{width:14px;height:14px;flex-shrink:0}
 .group-block{margin-bottom:22px}
 .group-head{display:flex;align-items:center;gap:8px;padding:0 2px;margin-bottom:10px}
 .group-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .group-name{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.6px;text-transform:uppercase}
 .group-cnt{margin-left:auto;font-size:11px;color:var(--text3);background:var(--bg3);padding:1px 8px;border-radius:20px;border:1px solid var(--border)}
 .menu-list{display:flex;flex-direction:column;gap:8px}
-.menu-row{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:14px 16px;
-  display:flex;align-items:center;gap:12px;cursor:pointer;
-  transition:all .18s;box-shadow:var(--shadow-xs);
-}
+.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs)}
 .menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)}
+.menu-row.archived{opacity:.6;border-style:dashed}
+.menu-row.archived:hover{border-color:var(--amber);transform:none}
 .menu-row-left{flex:1;min-width:0}
 .menu-row-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.menu-row-tags{display:flex;gap:6px;margin-top:5px;align-items:center}
+.menu-row-tags{display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap}
 .menu-row-right{text-align:right;flex-shrink:0}
 .row-1rm{font-size:18px;font-weight:700;color:var(--accent)}
 .row-1rm-unit{font-size:11px;font-weight:400;color:var(--text3)}
@@ -255,8 +164,9 @@ input,select{font-family:var(--font)}
 .empty-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty-desc{font-size:13px;line-height:1.8}
 
-/* ===== DETAIL ===== */
+/* DETAIL */
 .detail-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.detail-hero.archived-hero{border-color:var(--amber);background:var(--amber-bg)}
 .detail-name{font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px}
 .detail-tags{display:flex;gap:6px;flex-wrap:wrap}
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
@@ -264,8 +174,24 @@ input,select{font-family:var(--font)}
 .stat-val{font-size:20px;font-weight:700;color:var(--accent)}
 .stat-unit{font-size:10px;color:var(--text3)}
 .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ④ MENU ACTIONS */
+.menu-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.btn-action{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:var(--r-sm);font-size:13px;font-weight:500;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);transition:all .18s;cursor:pointer}
+.btn-action:hover{border-color:var(--border2)}
+.btn-action svg{width:14px;height:14px;flex-shrink:0}
+.btn-action.new-sess{border-color:var(--accent);color:var(--accent-t);background:var(--accent-bg)}
+.btn-action.new-sess:hover{opacity:.85}
+.btn-action.archive{border-color:var(--amber);color:var(--amber-t);background:var(--amber-bg)}
+.btn-action.archive:hover{opacity:.8}
+.btn-action.unarchive{border-color:var(--green);color:var(--green-t);background:var(--green-bg)}
+.btn-action.unarchive:hover{opacity:.8}
+.btn-action.delete{border-color:var(--red);color:var(--red-t);background:var(--red-bg)}
+.btn-action.delete:hover{opacity:.8}
+
+/* HISTORY TABLE */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.hist-table{width:100%;border-collapse:collapse;font-size:13px;min-width:300px}
+.hist-table{width:100%;border-collapse:collapse;font-size:13px;min-width:320px}
 .hist-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;border-bottom:1.5px solid var(--border);white-space:nowrap;text-transform:uppercase}
 .hist-table td{padding:12px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap}
 .hist-table tr:last-child td{border-bottom:none}
@@ -275,103 +201,40 @@ input,select{font-family:var(--font)}
 .hist-table tr.clickable{cursor:pointer}
 .hist-table tr.clickable:hover td{background:var(--surface2)}
 
-/* ===== SET EDIT ===== */
-.set-date-bar{
-  background:var(--nav-bg);border-radius:var(--r-sm);
-  padding:10px 14px;font-size:13px;color:var(--nav-text);
-  margin-bottom:14px;display:flex;align-items:center;gap:8px;
-  border:1px solid rgba(255,255,255,.07);
-}
-.set-date-bar strong{color:#fff;font-weight:600}
+/* SET EDIT */
+.set-session-bar{background:var(--nav-bg);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:var(--nav-text);margin-bottom:14px;display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.07)}
+.set-session-bar strong{color:#fff;font-weight:600}
+
+/* ③ 日付選択 */
+.date-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;box-shadow:var(--shadow-xs)}
+.date-row label{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.date-input{flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:14px;padding:8px 12px;border-radius:var(--r-xs);outline:none;transition:border-color .18s;min-width:0}
+.date-input:focus{border-color:var(--accent)}
+
 .set-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .input-box label{display:block;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase}
 .big-wrap{position:relative}
-.big-input{
-  width:100%;background:var(--bg3);border:1.5px solid var(--border);
-  color:var(--text);font-size:26px;font-weight:700;
-  padding:12px 40px 12px 14px;border-radius:var(--r-sm);
-  outline:none;transition:border-color .18s;font-family:var(--font);
-}
+.big-input{width:100%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-size:26px;font-weight:700;padding:12px 40px 12px 14px;border-radius:var(--r-sm);outline:none;transition:border-color .18s;font-family:var(--font)}
 .big-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
 .big-unit{position:absolute;right:12px;bottom:14px;font-size:11px;color:var(--text3);font-weight:600}
-.orm-preview{
-  background:var(--accent-bg);border:1px solid rgba(14,165,233,.25);
-  border-radius:var(--r-sm);padding:10px 14px;font-size:13px;
-  color:var(--accent-t);margin-bottom:14px;font-weight:500;min-height:40px;
-}
-@media (prefers-color-scheme:dark){
-  .orm-preview{border-color:rgba(56,189,248,.2);color:var(--accent-t)}
-}
+.orm-preview{background:var(--accent-bg);border:1px solid rgba(14,165,233,.25);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:var(--accent-t);margin-bottom:14px;font-weight:500;min-height:40px}
+@media (prefers-color-scheme:dark){.orm-preview{border-color:rgba(56,189,248,.2)}}
 .set-list{display:flex;flex-direction:column;gap:8px}
-.set-row{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:12px 14px;
-  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);
-  cursor:pointer;transition:all .18s;
-}
+.set-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);cursor:pointer;transition:all .18s}
 .set-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm)}
 .set-row.editing{border-color:var(--accent);background:var(--accent-bg)}
-.set-num{
-  width:26px;height:26px;background:var(--nav-bg);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;color:var(--nav-text);flex-shrink:0;
-}
-@media (prefers-color-scheme:dark){
-  .set-num{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
-}
+.set-num{width:26px;height:26px;background:var(--nav-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--nav-text);flex-shrink:0}
+@media (prefers-color-scheme:dark){.set-num{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}}
 .set-info{flex:1}
 .set-main{font-size:15px;font-weight:600;color:var(--text)}
 .set-sub{font-size:12px;color:var(--accent);margin-top:2px;font-weight:500}
 .set-edit-hint{font-size:10px;color:var(--text3);margin-top:1px}
-.btn-del{
-  width:30px;height:30px;background:var(--red-bg);border-radius:var(--r-xs);
-  color:var(--red);font-size:13px;display:flex;align-items:center;justify-content:center;
-  transition:all .18s;flex-shrink:0;
-}
+.btn-del{width:30px;height:30px;background:var(--red-bg);border-radius:var(--r-xs);color:var(--red);font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
 .btn-del:hover{opacity:.8}
 
-/* inline edit panel */
-.inline-edit{
-  background:var(--accent-bg);border:1.5px solid var(--accent);
-  border-radius:var(--r-sm);padding:14px;margin-top:8px;
-}
-.inline-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.inline-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;margin-bottom:4px;text-transform:uppercase}
-.inline-input{
-  width:100%;background:var(--surface);border:1.5px solid var(--border);
-  color:var(--text);font-size:20px;font-weight:700;
-  padding:10px 36px 10px 12px;border-radius:var(--r-xs);
-  outline:none;transition:border-color .18s;font-family:var(--font);
-  position:relative;
-}
-.inline-input:focus{border-color:var(--accent)}
-.inline-unit{position:absolute;right:10px;bottom:12px;font-size:11px;color:var(--text3);font-weight:600}
-.inline-orm{font-size:12px;color:var(--accent-t);font-weight:500;margin-bottom:10px}
-.inline-btn-row{display:flex;gap:8px}
-.btn-save{
-  flex:1;padding:9px;background:var(--accent);border-radius:var(--r-xs);
-  color:#fff;font-size:13px;font-weight:700;transition:all .18s;
-}
-.btn-save:hover{opacity:.9}
-.btn-cancel{
-  padding:9px 16px;background:var(--surface);border:1.5px solid var(--border);
-  border-radius:var(--r-xs);color:var(--text2);font-size:13px;font-weight:500;
-  transition:all .18s;
-}
-.btn-cancel:hover{border-color:var(--border2)}
-
-/* ===== TOAST ===== */
-#toast{
-  position:fixed;bottom:28px;left:50%;
-  transform:translateX(-50%) translateY(70px);
-  background:var(--nav-bg);color:#e8ecf5;
-  padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;
-  z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);
-  white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;
-  border:1px solid rgba(255,255,255,.08);
-}
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
-
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -406,14 +269,12 @@ input,select{font-family:var(--font)}
 
 <div id="app">
   <div id="header">
-    <button id="hamburger" onclick="toggleSidebar()">
-      <span></span><span></span><span></span>
-    </button>
+    <button id="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
     <div id="page-title">メニューの追加</div>
   </div>
   <div id="content">
 
-    <!-- ===== ADD MENU ===== -->
+    <!-- ADD MENU -->
     <div class="page active" id="page-add-menu">
       <div class="sec-head">
         <div class="sec-title">メニューの追加</div>
@@ -425,12 +286,9 @@ input,select{font-family:var(--font)}
           <div class="sel-wrap">
             <select class="form-select" id="sel-cat" onchange="onCatChange()">
               <option value="">-- 部位を選択 --</option>
-              <option value="胸">胸</option>
-              <option value="背中">背中</option>
-              <option value="肩">肩</option>
-              <option value="足">足</option>
-              <option value="腕">腕</option>
-              <option value="有酸素運動">有酸素運動</option>
+              <option value="胸">胸</option><option value="背中">背中</option>
+              <option value="肩">肩</option><option value="足">足</option>
+              <option value="腕">腕</option><option value="有酸素運動">有酸素運動</option>
             </select>
           </div>
         </div>
@@ -454,24 +312,36 @@ input,select{font-family:var(--font)}
       </div>
     </div>
 
-    <!-- ===== MENU LIST ===== -->
+    <!-- MENU LIST -->
     <div class="page" id="page-menu-list">
       <div class="sec-head">
         <div class="sec-title">メニュー一覧</div>
         <div class="sec-sub">部位ごとに登録したメニューが表示されます</div>
       </div>
+      <div class="list-toolbar">
+        <button class="toggle-archive-btn" id="toggle-archive-btn" onclick="toggleShowArchived()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v2H2zM3 6l1 8h8l1-8"/><path d="M6 9h4"/></svg>
+          アーカイブを表示
+        </button>
+      </div>
       <div id="list-body"></div>
     </div>
 
-    <!-- ===== MENU DETAIL ===== -->
+    <!-- MENU DETAIL -->
     <div class="page" id="page-menu-detail">
-      <button class="btn-ghost" onclick="go('menu-list')">← 一覧に戻る</button>
+      <button class="back-btn" onclick="go('menu-list')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
+        一覧に戻る
+      </button>
       <div id="detail-body"></div>
     </div>
 
-    <!-- ===== SET EDIT ===== -->
+    <!-- SET EDIT -->
     <div class="page" id="page-set-edit">
-      <button class="btn-ghost" id="set-back">← 詳細に戻る</button>
+      <button class="back-btn" id="set-back">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
+        詳細に戻る
+      </button>
       <div id="set-edit-body"></div>
     </div>
 
@@ -481,20 +351,38 @@ input,select{font-family:var(--font)}
 
 <script>
 // ===== STATE =====
+// データ構造: sessions[menuId][sessionId] = { date:'YYYY-MM-DD', sets:[{w,r}] }
 const S = {
-  menus:   JSON.parse(localStorage.getItem('gl_menus')   || '[]'),
-  history: JSON.parse(localStorage.getItem('gl_history') || '{}'),
-  menu: null,
-  date: null,
-  editingSetIdx: null,
+  menus:    JSON.parse(localStorage.getItem('gl_menus')    || '[]'),
+  sessions: JSON.parse(localStorage.getItem('gl_sessions') || '{}'),
+  menu: null, sessionId: null, editingSetIdx: null, showArchived: false,
 };
+
+// 旧形式(gl_history)からの自動マイグレーション
+(function migrate() {
+  const old = localStorage.getItem('gl_history');
+  if (!old) return;
+  try {
+    const hist = JSON.parse(old);
+    for (const [menuId, dateMap] of Object.entries(hist)) {
+      if (!S.sessions[menuId]) S.sessions[menuId] = {};
+      for (const [date, sets] of Object.entries(dateMap)) {
+        const sid = 'sess_migrated_' + menuId.slice(-6) + '_' + date;
+        if (!S.sessions[menuId][sid]) S.sessions[menuId][sid] = { date, sets };
+      }
+    }
+    localStorage.removeItem('gl_history');
+    persist();
+  } catch(e) {}
+})();
+
 const persist = () => {
-  localStorage.setItem('gl_menus',   JSON.stringify(S.menus));
-  localStorage.setItem('gl_history', JSON.stringify(S.history));
+  localStorage.setItem('gl_menus',    JSON.stringify(S.menus));
+  localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
 };
 
 // ===== UTILS =====
-const orm  = (w,r) => +(w*(1+r/40)).toFixed(1);
+const orm = (w,r) => +(w*(1+r/40)).toFixed(1);
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -512,25 +400,21 @@ const toast = msg => {
 };
 const tagClass = t => ({マシン:'tag-machine',フリーウェイト:'tag-free',自重運動:'tag-body',有酸素運動:'tag-cardio'}[t]||'');
 const dotColor = c => ({胸:'#f87171',背中:'#fb923c',肩:'#facc15',足:'#4ade80',腕:'#60a5fa',有酸素運動:'#c084fc'}[c]||'#9ca3af');
-const menuStats = id => {
+
+function menuStats(menuId) {
   let maxOrm=0, maxVol=0, lastDate=null;
-  for (const [date,sets] of Object.entries(S.history[id]||{})) {
+  for (const sess of Object.values(S.sessions[menuId]||{})) {
     let vol=0, mxO=0;
-    sets.forEach(s => { const o=orm(s.w,s.r); if(o>mxO) mxO=o; vol+=s.w*s.r; });
+    (sess.sets||[]).forEach(s=>{ const o=orm(s.w,s.r); if(o>mxO) mxO=o; vol+=s.w*s.r; });
     if(mxO>maxOrm) maxOrm=mxO;
     if(vol>maxVol) maxVol=+vol.toFixed(1);
-    if(!lastDate||date>lastDate) lastDate=date;
+    if(!lastDate||sess.date>lastDate) lastDate=sess.date;
   }
   return {maxOrm, maxVol, lastDate};
-};
+}
 
-// 全角30文字制限
 function onNameInput(el) {
-  const max = 30;
-  let val = el.value;
-  if ([...val].length > max) {
-    el.value = [...val].slice(0, max).join('');
-  }
+  if([...el.value].length>30) el.value=[...el.value].slice(0,30).join('');
 }
 
 // ===== SIDEBAR =====
@@ -541,169 +425,210 @@ const toggleSidebar = () => {
   document.getElementById('hamburger').classList.toggle('open', open);
 };
 const closeSidebar = () => {
-  document.getElementById('sidebar').classList.remove('show');
-  document.getElementById('overlay').classList.remove('show');
+  ['sidebar','overlay'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('hamburger').classList.remove('open');
 };
 
 // ===== NAVIGATION =====
 const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録'};
 function go(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('page-title').textContent = TITLES[page]||page;
-  document.querySelectorAll('.sb-item[data-page]').forEach(i =>
-    i.classList.toggle('active', i.dataset.page === page));
+  document.querySelectorAll('.sb-item[data-page]').forEach(i=>i.classList.toggle('active',i.dataset.page===page));
   closeSidebar();
-  if (page==='menu-list')   renderList();
-  if (page==='menu-detail') renderDetail();
-  if (page==='set-edit')    renderSetEdit();
+  if(page==='menu-list')   renderList();
+  if(page==='menu-detail') renderDetail();
+  if(page==='set-edit')    renderSetEdit();
 }
 
 // ===== ADD MENU =====
 let selTypeVal = null;
 function onCatChange() {
   const cat = document.getElementById('sel-cat').value;
-  document.getElementById('type-section').style.display = cat==='有酸素運動' ? 'none' : 'block';
-  selTypeVal = cat==='有酸素運動' ? '有酸素運動' : null;
-  if (cat!=='有酸素運動') document.querySelectorAll('.type-chip').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('type-section').style.display = cat==='有酸素運動'?'none':'block';
+  selTypeVal = cat==='有酸素運動'?'有酸素運動':null;
+  if(cat!=='有酸素運動') document.querySelectorAll('.type-chip').forEach(c=>c.classList.remove('sel'));
   validateAdd();
 }
 function selType(el) {
   document.querySelectorAll('.type-chip').forEach(c=>c.classList.remove('sel'));
-  el.classList.add('sel');
-  selTypeVal = el.dataset.type;
-  validateAdd();
+  el.classList.add('sel'); selTypeVal=el.dataset.type; validateAdd();
 }
 function validateAdd() {
-  const cat  = document.getElementById('sel-cat').value;
-  const name = document.getElementById('inp-name').value.trim();
-  document.getElementById('btn-add').disabled = !(cat && name && selTypeVal);
+  const cat=document.getElementById('sel-cat').value;
+  const name=document.getElementById('inp-name').value.trim();
+  document.getElementById('btn-add').disabled=!(cat&&name&&selTypeVal);
 }
 function addMenu() {
-  const cat  = document.getElementById('sel-cat').value;
-  const name = document.getElementById('inp-name').value.trim();
-  if (!cat||!name||!selTypeVal) return;
-  if (S.menus.find(m=>m.name===name&&m.category===cat)) { toast('同じ部位に同名のメニューがあります'); return; }
-  S.menus.push({ id:'menu_'+Date.now(), name, category:cat, type:selTypeVal });
-  persist();
-  toast(`「${name}」を追加しました`);
-  document.getElementById('sel-cat').value = '';
-  document.getElementById('inp-name').value = '';
-  document.getElementById('type-section').style.display = 'block';
+  const cat=document.getElementById('sel-cat').value;
+  const name=document.getElementById('inp-name').value.trim();
+  if(!cat||!name||!selTypeVal) return;
+  if(S.menus.find(m=>m.name===name&&m.category===cat&&!m.archived)){toast('同じ部位に同名のメニューがあります');return;}
+  S.menus.push({id:'menu_'+Date.now(),name,category:cat,type:selTypeVal,archived:false});
+  persist(); toast(`「${name}」を追加しました`);
+  document.getElementById('sel-cat').value='';
+  document.getElementById('inp-name').value='';
+  document.getElementById('type-section').style.display='block';
   document.querySelectorAll('.type-chip').forEach(c=>c.classList.remove('sel'));
-  selTypeVal = null;
-  document.getElementById('btn-add').disabled = true;
+  selTypeVal=null; document.getElementById('btn-add').disabled=true;
 }
 
 // ===== MENU LIST =====
-const CATS = ['胸','背中','肩','足','腕','有酸素運動'];
+const CATS=['胸','背中','肩','足','腕','有酸素運動'];
+function toggleShowArchived() {
+  S.showArchived=!S.showArchived;
+  const btn=document.getElementById('toggle-archive-btn');
+  btn.classList.toggle('on',S.showArchived);
+  // テキストノード更新
+  const nodes=[...btn.childNodes].filter(n=>n.nodeType===3);
+  if(nodes.length) nodes[nodes.length-1].textContent=S.showArchived?' アーカイブを非表示':' アーカイブを表示';
+  renderList();
+}
 function renderList() {
-  const el = document.getElementById('list-body');
-  if (!S.menus.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">まだメニューがありません</div><div class="empty-desc">「メニューの追加」から<br>トレーニングメニューを登録してください</div></div>`;
+  const el=document.getElementById('list-body');
+  const visible=S.menus.filter(m=>S.showArchived?true:!m.archived);
+  if(!visible.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">まだメニューがありません</div><div class="empty-desc">「メニューの追加」からトレーニングメニューを登録してください</div></div>`;
     return;
   }
-  let html = '';
-  for (const cat of CATS) {
-    const items = S.menus.filter(m=>m.category===cat);
-    if (!items.length) continue;
-    html += `<div class="group-block">
-      <div class="group-head">
-        <div class="group-dot" style="background:${dotColor(cat)}"></div>
-        <div class="group-name">${cat}</div>
-        <div class="group-cnt">${items.length}件</div>
-      </div>
-      <div class="menu-list">`;
-    for (const m of items) {
-      const st = menuStats(m.id);
-      html += `<div class="menu-row" onclick="openDetail('${m.id}')">
+  let html='';
+  for(const cat of CATS){
+    const items=visible.filter(m=>m.category===cat);
+    if(!items.length) continue;
+    html+=`<div class="group-block"><div class="group-head"><div class="group-dot" style="background:${dotColor(cat)}"></div><div class="group-name">${cat}</div><div class="group-cnt">${items.length}件</div></div><div class="menu-list">`;
+    for(const m of items){
+      const st=menuStats(m.id);
+      html+=`<div class="menu-row${m.archived?' archived':''}" onclick="openDetail('${m.id}')">
         <div class="menu-row-left">
           <div class="menu-row-name">${m.name}</div>
           <div class="menu-row-tags">
             <span class="tag ${tagClass(m.type)}">${m.type}</span>
+            ${m.archived?'<span class="tag tag-archived">アーカイブ済</span>':''}
             ${st.lastDate?`<span style="font-size:11px;color:var(--text3)">最終: ${fmtDate(st.lastDate)}</span>`:''}
           </div>
         </div>
         <div class="menu-row-right">
-          ${st.maxOrm>0
-            ? `<div class="row-1rm">${st.maxOrm}<span class="row-1rm-unit"> kg</span></div><div class="row-1rm-label">最大1RM</div>`
-            : `<div style="font-size:12px;color:var(--text3)">未記録</div>`}
+          ${st.maxOrm>0?`<div class="row-1rm">${st.maxOrm}<span class="row-1rm-unit"> kg</span></div><div class="row-1rm-label">最大1RM</div>`:'<div style="font-size:12px;color:var(--text3)">未記録</div>'}
         </div>
         <span class="row-chevron">›</span>
       </div>`;
     }
-    html += `</div></div>`;
+    html+=`</div></div>`;
   }
-  el.innerHTML = html;
+  el.innerHTML=html;
 }
-function openDetail(id) {
-  S.menu = S.menus.find(m=>m.id===id);
-  go('menu-detail');
-}
+function openDetail(id){S.menu=S.menus.find(m=>m.id===id);go('menu-detail');}
 
 // ===== MENU DETAIL =====
-function renderDetail() {
-  if (!S.menu) return;
-  const m = S.menu;
-  const entries = S.history[m.id]||{};
-  const st = menuStats(m.id);
-  const dates = Object.keys(entries).sort((a,b)=>b.localeCompare(a));
-  let rows = '';
-  for (const d of dates) {
-    const sets = entries[d];
-    let mxO=0, vol=0, mxW=0;
-    sets.forEach(s=>{ const o=orm(s.w,s.r); if(o>mxO) mxO=o; vol+=s.w*s.r; if(s.w>mxW) mxW=s.w; });
-    rows += `<tr class="clickable" onclick="openSetEdit('${d}')">
-      <td class="td-date">${fmtDate(d)}</td>
-      <td>${mxW} kg</td>
-      <td class="td-vol">${vol.toFixed(0)} kg</td>
-      <td class="td-1rm">${mxO.toFixed(1)} kg</td>
+function renderDetail(){
+  if(!S.menu) return;
+  const m=S.menu;
+  const sessMap=S.sessions[m.id]||{};
+  const st=menuStats(m.id);
+  const sessList=Object.entries(sessMap)
+    .map(([id,s])=>({id,...s}))
+    .sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+
+  let rows='';
+  for(const sess of sessList){
+    let mxO=0,vol=0,mxW=0;
+    (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;});
+    const cnt=(sess.sets||[]).length;
+    rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
+      <td class="td-date">${fmtDate(sess.date)}</td>
+      <td style="color:var(--text3)">${cnt}セット</td>
+      <td>${mxW>0?mxW+' kg':'—'}</td>
+      <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
+      <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
     </tr>`;
   }
-  document.getElementById('detail-body').innerHTML = `
-    <div class="detail-hero">
+
+  const archBtn=m.archived
+    ?`<button class="btn-action unarchive" onclick="unarchiveMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 9V3M5 6l3-3 3 3"/></svg>解除</button>`
+    :`<button class="btn-action archive" onclick="archiveMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v2H2zM3 6l1 8h8l1-8"/><path d="M6 9h4"/></svg>アーカイブ</button>`;
+
+  document.getElementById('detail-body').innerHTML=`
+    <div class="detail-hero${m.archived?' archived-hero':''}">
       <div class="detail-name">${m.name}</div>
       <div class="detail-tags">
         <span class="tag ${tagClass(m.type)}">${m.type}</span>
         <span class="tag" style="background:var(--bg3);color:var(--text3)">${m.category}</span>
+        ${m.archived?'<span class="tag tag-archived">アーカイブ済</span>':''}
       </div>
       <div class="stats-grid">
         <div class="stat-box"><div class="stat-val">${st.maxOrm||'—'}</div><div class="stat-unit">${st.maxOrm?'kg':''}</div><div class="stat-label">最大1RM</div></div>
         <div class="stat-box"><div class="stat-val">${st.maxVol||'—'}</div><div class="stat-unit">${st.maxVol?'kg':''}</div><div class="stat-label">最大ボリューム</div></div>
-        <div class="stat-box"><div class="stat-val">${dates.length}</div><div class="stat-unit">回</div><div class="stat-label">記録日数</div></div>
+        <div class="stat-box"><div class="stat-val">${sessList.length}</div><div class="stat-unit">回</div><div class="stat-label">セッション数</div></div>
       </div>
     </div>
-    <div class="btn-row">
-      <button class="btn-secondary" onclick="openSetEdit(null)">＋ 新規追加</button>
+    <div class="menu-actions">
+      ${!m.archived?`<button class="btn-action new-sess" onclick="openSetEdit(null)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>新規セッション</button>`:''}
+      ${archBtn}
+      <button class="btn-action delete" onclick="deleteMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V3h4v1M5 4l.5 9h5l.5-9"/></svg>完全削除</button>
     </div>
-    ${dates.length ? `
+    ${sessList.length?`
     <div class="card" style="padding:0;overflow:hidden">
       <div class="table-wrap">
         <table class="hist-table">
-          <thead><tr><th>日付</th><th>最大重量</th><th>ボリューム</th><th>1RM</th></tr></thead>
+          <thead><tr><th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-    </div>` : `
+    </div>`:`
     <div class="empty-state" style="padding:32px 16px">
       <div class="empty-icon">📋</div>
       <div class="empty-title">記録がありません</div>
-      <div class="empty-desc">「新規追加」からトレーニングを記録しましょう</div>
+      <div class="empty-desc">「新規セッション」からトレーニングを記録しましょう</div>
     </div>`}`;
 }
-function openSetEdit(date) {
-  S.date = date || today();
-  S.editingSetIdx = null;
-  document.getElementById('set-back').onclick = () => go('menu-detail');
-  go('set-edit');
+
+// ④ アーカイブ・削除
+function archiveMenu(){
+  if(!confirm(`「${S.menu.name}」をアーカイブしますか？\n一覧には表示されなくなりますが記録は保持されます。`)) return;
+  S.menu.archived=true; persist(); toast('アーカイブしました'); renderDetail();
+}
+function unarchiveMenu(){
+  S.menu.archived=false; persist(); toast('アーカイブを解除しました'); renderDetail();
+}
+function deleteMenu(){
+  if(!confirm(`「${S.menu.name}」を完全に削除しますか？\n⚠️ この操作は取り消せません。全記録も削除されます。`)) return;
+  S.menus=S.menus.filter(m=>m.id!==S.menu.id);
+  delete S.sessions[S.menu.id];
+  persist(); toast('削除しました'); S.menu=null; go('menu-list');
 }
 
 // ===== SET EDIT =====
-function renderSetEdit() {
-  if (!S.menu||!S.date) return;
-  document.getElementById('set-edit-body').innerHTML = `
-    <div class="set-date-bar">📅 <strong>${fmtDate(S.date)}</strong> — ${S.menu.name}</div>
+function openSetEdit(sid){
+  if(sid){
+    S.sessionId=sid;
+  } else {
+    // ② 新規セッションID発行（同日複数対応）
+    const newId='sess_'+Date.now();
+    if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
+    S.sessions[S.menu.id][newId]={date:today(),sets:[]};
+    persist();
+    S.sessionId=newId;
+  }
+  S.editingSetIdx=null;
+  document.getElementById('set-back').onclick=()=>go('menu-detail');
+  go('set-edit');
+}
+
+function renderSetEdit(){
+  if(!S.menu||!S.sessionId) return;
+  const sess=S.sessions[S.menu.id]?.[S.sessionId];
+  if(!sess) return;
+
+  document.getElementById('set-edit-body').innerHTML=`
+    <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
+
+    <!-- ③ 日付自由選択 -->
+    <div class="date-row">
+      <label>記録日</label>
+      <input type="date" class="date-input" id="sess-date" value="${sess.date}" onchange="updateSessionDate(this.value)">
+    </div>
+
     <div class="card">
       <div class="card-label" id="form-label">セットを追加</div>
       <div class="set-input-grid">
@@ -727,121 +652,114 @@ function renderSetEdit() {
       <div class="orm-preview" id="orm-prev">重量と回数を入力すると 1RM を表示します</div>
       <button class="btn-primary" id="btn-add-set" onclick="commitSet()" disabled>セットを追加</button>
     </div>
-    <div class="card-label" style="padding:0 2px;margin-bottom:8px" id="set-count-label">記録済みセット</div>
+
+    <div class="card-label" id="set-count-label" style="padding:0 2px;margin-bottom:8px">記録済みセット</div>
     <div class="set-list" id="set-list"></div>`;
+
   renderSets();
 }
 
-function updatePreview() {
-  const w = parseFloat(document.getElementById('inp-w').value);
-  const r = parseInt(document.getElementById('inp-r').value);
-  const prev = document.getElementById('orm-prev');
-  const btn  = document.getElementById('btn-add-set');
-  if (w>0&&r>0) {
-    prev.textContent = `推定1RM：${orm(w,r)} kg（${w}kg × ${r}回）`;
-    btn.disabled = false;
-  } else {
-    prev.textContent = '重量と回数を入力すると 1RM を表示します';
-    btn.disabled = true;
-  }
+function updateSessionDate(val){
+  if(!val||!S.sessionId) return;
+  S.sessions[S.menu.id][S.sessionId].date=val;
+  persist();
 }
 
-function commitSet() {
-  const w = parseFloat(document.getElementById('inp-w').value);
-  const r = parseInt(document.getElementById('inp-r').value);
-  if (!w||!r) return;
-  if (!S.history[S.menu.id]) S.history[S.menu.id] = {};
-  if (!S.history[S.menu.id][S.date]) S.history[S.menu.id][S.date] = [];
-  const sets = S.history[S.menu.id][S.date];
+function updatePreview(){
+  const w=parseFloat(document.getElementById('inp-w').value);
+  const r=parseInt(document.getElementById('inp-r').value);
+  const prev=document.getElementById('orm-prev');
+  const btn=document.getElementById('btn-add-set');
+  if(w>0&&r>0){prev.textContent=`推定1RM：${orm(w,r)} kg（${w}kg × ${r}回）`;btn.disabled=false;}
+  else{prev.textContent='重量と回数を入力すると 1RM を表示します';btn.disabled=true;}
+}
 
-  if (S.editingSetIdx !== null) {
-    sets[S.editingSetIdx] = {w, r};
-    S.editingSetIdx = null;
-    document.getElementById('form-label').textContent = 'セットを追加';
-    document.getElementById('btn-add-set').textContent = 'セットを追加';
+function commitSet(){
+  const w=parseFloat(document.getElementById('inp-w').value);
+  const r=parseInt(document.getElementById('inp-r').value);
+  if(!w||!r) return;
+  const sets=S.sessions[S.menu.id][S.sessionId].sets;
+  if(S.editingSetIdx!==null){
+    sets[S.editingSetIdx]={w,r};
+    S.editingSetIdx=null;
+    document.getElementById('form-label').textContent='セットを追加';
+    document.getElementById('btn-add-set').textContent='セットを追加';
     toast('セットを更新しました');
   } else {
-    sets.push({w, r});
+    sets.push({w,r});
     toast('セットを追加しました');
   }
   persist();
-  document.getElementById('inp-w').value = '';
-  document.getElementById('inp-r').value = '';
-  document.getElementById('orm-prev').textContent = '重量と回数を入力すると 1RM を表示します';
-  document.getElementById('btn-add-set').disabled = true;
-  updateSetCountLabel();
-  renderSets();
+  document.getElementById('inp-w').value='';
+  document.getElementById('inp-r').value='';
+  document.getElementById('orm-prev').textContent='重量と回数を入力すると 1RM を表示します';
+  document.getElementById('btn-add-set').disabled=true;
+  updateSetCountLabel(); renderSets();
 }
 
-function editSet(idx) {
-  const sets = (S.history[S.menu.id]||{})[S.date]||[];
-  const s = sets[idx];
-  S.editingSetIdx = idx;
-  document.getElementById('inp-w').value = s.w;
-  document.getElementById('inp-r').value = s.r;
-  document.getElementById('form-label').textContent = `セット${idx+1}を編集中`;
-  document.getElementById('btn-add-set').textContent = '変更を保存';
-  document.getElementById('btn-add-set').disabled = false;
+function editSet(idx){
+  const s=S.sessions[S.menu.id][S.sessionId].sets[idx];
+  S.editingSetIdx=idx;
+  document.getElementById('inp-w').value=s.w;
+  document.getElementById('inp-r').value=s.r;
+  document.getElementById('form-label').textContent=`セット${idx+1}を編集中`;
+  document.getElementById('btn-add-set').textContent='変更を保存';
+  document.getElementById('btn-add-set').disabled=false;
   updatePreview();
   document.getElementById('inp-w').focus();
-  document.getElementById('content').scrollTo({top:0, behavior:'smooth'});
+  document.getElementById('content').scrollTo({top:0,behavior:'smooth'});
   renderSets();
 }
 
-function cancelEdit() {
-  S.editingSetIdx = null;
-  document.getElementById('inp-w').value = '';
-  document.getElementById('inp-r').value = '';
-  document.getElementById('form-label').textContent = 'セットを追加';
-  document.getElementById('btn-add-set').textContent = 'セットを追加';
-  document.getElementById('btn-add-set').disabled = true;
-  document.getElementById('orm-prev').textContent = '重量と回数を入力すると 1RM を表示します';
+function cancelEdit(){
+  S.editingSetIdx=null;
+  document.getElementById('inp-w').value='';
+  document.getElementById('inp-r').value='';
+  document.getElementById('form-label').textContent='セットを追加';
+  document.getElementById('btn-add-set').textContent='セットを追加';
+  document.getElementById('btn-add-set').disabled=true;
+  document.getElementById('orm-prev').textContent='重量と回数を入力すると 1RM を表示します';
   renderSets();
 }
 
-function deleteSet(idx) {
-  if (!confirm(`セット${idx+1}を削除しますか？`)) return;
-  if (S.editingSetIdx === idx) cancelEdit();
-  S.history[S.menu.id][S.date].splice(idx, 1);
-  if (!S.history[S.menu.id][S.date].length) delete S.history[S.menu.id][S.date];
-  persist();
+function deleteSet(idx){
+  if(!confirm(`セット${idx+1}を削除しますか？`)) return;
+  if(S.editingSetIdx===idx) cancelEdit();
+  S.sessions[S.menu.id][S.sessionId].sets.splice(idx,1);
+  persist(); updateSetCountLabel(); renderSets(); toast('セットを削除しました');
+}
+
+function updateSetCountLabel(){
+  const sets=S.sessions[S.menu.id]?.[S.sessionId]?.sets||[];
+  const el=document.getElementById('set-count-label');
+  if(el) el.textContent=`記録済みセット（${sets.length}セット）`;
+}
+
+function renderSets(){
+  const sets=S.sessions[S.menu.id]?.[S.sessionId]?.sets||[];
   updateSetCountLabel();
-  renderSets();
-  toast('セットを削除しました');
-}
-
-function updateSetCountLabel() {
-  const sets = (S.history[S.menu.id]||{})[S.date]||[];
-  const el = document.getElementById('set-count-label');
-  if (el) el.textContent = `記録済みセット（${sets.length}セット）`;
-}
-
-function renderSets() {
-  const sets = (S.history[S.menu.id]||{})[S.date]||[];
-  updateSetCountLabel();
-  const el = document.getElementById('set-list');
-  if (!el) return;
-  if (!sets.length) {
-    el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだセットが追加されていません</div>`;
+  const el=document.getElementById('set-list');
+  if(!el) return;
+  if(!sets.length){
+    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだセットが追加されていません</div>`;
     return;
   }
-  el.innerHTML = sets.map((s,i) => {
-    const isEditing = S.editingSetIdx === i;
+  el.innerHTML=sets.map((s,i)=>{
+    const isEditing=S.editingSetIdx===i;
     return `<div class="set-row${isEditing?' editing':''}" onclick="editSet(${i})">
       <div class="set-num">${i+1}</div>
       <div class="set-info">
         <div class="set-main">${s.w} kg × ${s.r} 回</div>
         <div class="set-sub">1RM：${orm(s.w,s.r)} kg</div>
-        <div class="set-edit-hint">${isEditing ? '✏️ 編集中 — 上のフォームで変更できます' : 'タップして編集'}</div>
+        <div class="set-edit-hint">${isEditing?'✏️ 編集中 — 上のフォームで変更できます':'タップして編集'}</div>
       </div>
       <button class="btn-del" onclick="event.stopPropagation();deleteSet(${i})">✕</button>
     </div>`;
   }).join('');
 }
 
-// ===== SERVICE WORKER =====
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 </script>
 </body>
