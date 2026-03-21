@@ -232,6 +232,28 @@ input,select{font-family:var(--font)}
 .btn-del{width:30px;height:30px;background:var(--red-bg);border-radius:var(--r-xs);color:var(--red);font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
 .btn-del:hover{opacity:.8}
 
+/* CARDIO FORM */
+.cardio-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.cardio-field{display:flex;flex-direction:column;gap:5px}
+.cardio-field label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.cardio-input-wrap{position:relative}
+.cardio-input{width:100%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:20px;font-weight:700;padding:10px 44px 10px 12px;border-radius:var(--r-sm);outline:none;transition:border-color .18s}
+.cardio-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+.cardio-input::placeholder{color:var(--text3);font-size:16px;font-weight:400}
+.cardio-unit{position:absolute;right:10px;bottom:12px;font-size:11px;color:var(--text3);font-weight:600}
+.cardio-optional-label{font-size:11px;color:var(--text3);margin:4px 0 10px;display:flex;align-items:center;gap:6px}
+.cardio-optional-label::before{content:'';display:block;width:20px;height:1px;background:var(--border2)}
+.cardio-optional-label::after{content:'';display:block;flex:1;height:1px;background:var(--border2)}
+.cardio-record{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-sm)}
+.cardio-record-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cardio-record-title{font-size:13px;font-weight:700;color:var(--text2)}
+.cardio-record-date{font-size:12px;color:var(--text3)}
+.cardio-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.cardio-stat{background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;border:1px solid var(--border)}
+.cardio-stat-val{font-size:18px;font-weight:700;color:var(--accent)}
+.cardio-stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+.cardio-stat.full{grid-column:1/-1}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -401,7 +423,22 @@ const toast = msg => {
 const tagClass = t => ({マシン:'tag-machine',フリーウェイト:'tag-free',自重運動:'tag-body',有酸素運動:'tag-cardio'}[t]||'');
 const dotColor = c => ({胸:'#f87171',背中:'#fb923c',肩:'#facc15',足:'#4ade80',腕:'#60a5fa',有酸素運動:'#c084fc'}[c]||'#9ca3af');
 
+const isCardioMenu = m => m && m.category === '有酸素運動';
+
 function menuStats(menuId) {
+  const menu = S.menus.find(m=>m.id===menuId);
+  if (isCardioMenu(menu)) {
+    // 有酸素：最大距離・最大消費カロリー・最終日
+    let maxDist=0, maxCal=0, lastDate=null;
+    for (const sess of Object.values(S.sessions[menuId]||{})) {
+      if (sess.cardio) {
+        if((sess.cardio.dist||0)>maxDist) maxDist=sess.cardio.dist||0;
+        if((sess.cardio.cal||0)>maxCal)   maxCal=sess.cardio.cal||0;
+      }
+      if(!lastDate||sess.date>lastDate) lastDate=sess.date;
+    }
+    return {maxDist, maxCal, lastDate, isCardio:true};
+  }
   let maxOrm=0, maxVol=0, lastDate=null;
   for (const sess of Object.values(S.sessions[menuId]||{})) {
     let vol=0, mxO=0;
@@ -410,7 +447,7 @@ function menuStats(menuId) {
     if(vol>maxVol) maxVol=+vol.toFixed(1);
     if(!lastDate||sess.date>lastDate) lastDate=sess.date;
   }
-  return {maxOrm, maxVol, lastDate};
+  return {maxOrm, maxVol, lastDate, isCardio:false};
 }
 
 function onNameInput(el) {
@@ -531,17 +568,30 @@ function renderDetail(){
     .sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
 
   let rows='';
-  for(const sess of sessList){
-    let mxO=0,vol=0,mxW=0;
-    (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;});
-    const cnt=(sess.sets||[]).length;
-    rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
-      <td class="td-date">${fmtDate(sess.date)}</td>
-      <td style="color:var(--text3)">${cnt}セット</td>
-      <td>${mxW>0?mxW+' kg':'—'}</td>
-      <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
-      <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
-    </tr>`;
+  if(isCardioMenu(m)){
+    for(const sess of sessList){
+      const c=sess.cardio||{};
+      rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
+        <td class="td-date">${fmtDate(sess.date)}</td>
+        <td>${c.time!=null?c.time+' 分':'—'}</td>
+        <td>${c.dist!=null?c.dist+' km':'—'}</td>
+        <td class="td-vol">${c.cal!=null?c.cal+' kcal':'—'}</td>
+        <td class="td-1rm">${c.hr!=null?c.hr+' bpm':'—'}</td>
+      </tr>`;
+    }
+  } else {
+    for(const sess of sessList){
+      let mxO=0,vol=0,mxW=0;
+      (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;});
+      const cnt=(sess.sets||[]).length;
+      rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
+        <td class="td-date">${fmtDate(sess.date)}</td>
+        <td style="color:var(--text3)">${cnt}セット</td>
+        <td>${mxW>0?mxW+' kg':'—'}</td>
+        <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
+        <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
+      </tr>`;
+    }
   }
 
   const archBtn=m.archived
@@ -557,9 +607,15 @@ function renderDetail(){
         ${m.archived?'<span class="tag tag-archived">アーカイブ済</span>':''}
       </div>
       <div class="stats-grid">
+        ${st.isCardio ? `
+        <div class="stat-box"><div class="stat-val">${st.maxDist||'—'}</div><div class="stat-unit">${st.maxDist?'km':''}</div><div class="stat-label">最大距離</div></div>
+        <div class="stat-box"><div class="stat-val">${st.maxCal||'—'}</div><div class="stat-unit">${st.maxCal?'kcal':''}</div><div class="stat-label">最大消費カロリー</div></div>
+        <div class="stat-box"><div class="stat-val">${sessList.length}</div><div class="stat-unit">回</div><div class="stat-label">セッション数</div></div>
+        ` : `
         <div class="stat-box"><div class="stat-val">${st.maxOrm||'—'}</div><div class="stat-unit">${st.maxOrm?'kg':''}</div><div class="stat-label">最大1RM</div></div>
         <div class="stat-box"><div class="stat-val">${st.maxVol||'—'}</div><div class="stat-unit">${st.maxVol?'kg':''}</div><div class="stat-label">最大ボリューム</div></div>
         <div class="stat-box"><div class="stat-val">${sessList.length}</div><div class="stat-unit">回</div><div class="stat-label">セッション数</div></div>
+        `}
       </div>
     </div>
     <div class="menu-actions">
@@ -571,7 +627,7 @@ function renderDetail(){
     <div class="card" style="padding:0;overflow:hidden">
       <div class="table-wrap">
         <table class="hist-table">
-          <thead><tr><th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th></tr></thead>
+          <thead><tr>${isCardioMenu(m)?'<th>日付</th><th>時間</th><th>距離</th><th>消費Cal</th><th>平均心拍</th>':'<th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th>'}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -603,10 +659,13 @@ function openSetEdit(sid){
   if(sid){
     S.sessionId=sid;
   } else {
-    // ② 新規セッションID発行（同日複数対応）
     const newId='sess_'+Date.now();
     if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
-    S.sessions[S.menu.id][newId]={date:today(),sets:[]};
+    // 有酸素は cardio オブジェクト、筋トレは sets 配列で初期化
+    const init = isCardioMenu(S.menu)
+      ? {date:today(), cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
+      : {date:today(), sets:[]};
+    S.sessions[S.menu.id][newId]=init;
     persist();
     S.sessionId=newId;
   }
@@ -620,15 +679,89 @@ function renderSetEdit(){
   const sess=S.sessions[S.menu.id]?.[S.sessionId];
   if(!sess) return;
 
-  document.getElementById('set-edit-body').innerHTML=`
-    <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
-
-    <!-- ③ 日付自由選択 -->
+  const dateRow=`
     <div class="date-row">
       <label>記録日</label>
       <input type="date" class="date-input" id="sess-date" value="${sess.date}" onchange="updateSessionDate(this.value)">
-    </div>
+    </div>`;
 
+  if(isCardioMenu(S.menu)){
+    const c=sess.cardio||{};
+    document.getElementById('set-edit-body').innerHTML=`
+      <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
+      ${dateRow}
+      <div class="card">
+        <div class="card-label">有酸素記録</div>
+
+        <div class="cardio-grid">
+          <div class="cardio-field">
+            <label>合計時間 <span style="color:var(--red);font-size:10px">必須</span></label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-time" placeholder="30"
+                inputmode="numeric" min="0" step="1" value="${c.time??''}" oninput="saveCardio()">
+              <span class="cardio-unit">分</span>
+            </div>
+          </div>
+          <div class="cardio-field">
+            <label>合計距離 <span style="color:var(--red);font-size:10px">必須</span></label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-dist" placeholder="5.0"
+                inputmode="decimal" min="0" step="0.1" value="${c.dist??''}" oninput="saveCardio()">
+              <span class="cardio-unit">km</span>
+            </div>
+          </div>
+          <div class="cardio-field">
+            <label>消費カロリー <span style="color:var(--red);font-size:10px">必須</span></label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-cal" placeholder="300"
+                inputmode="numeric" min="0" step="1" value="${c.cal??''}" oninput="saveCardio()">
+              <span class="cardio-unit">kcal</span>
+            </div>
+          </div>
+          <div class="cardio-field">
+            <label>平均心拍数 <span style="color:var(--red);font-size:10px">必須</span></label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-hr" placeholder="140"
+                inputmode="numeric" min="0" step="1" value="${c.hr??''}" oninput="saveCardio()">
+              <span class="cardio-unit">bpm</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cardio-optional-label">任意項目</div>
+
+        <div class="cardio-grid">
+          <div class="cardio-field">
+            <label>最大速度</label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-maxspd" placeholder="12.0"
+                inputmode="decimal" min="0" step="0.1" value="${c.maxSpd??''}" oninput="saveCardio()">
+              <span class="cardio-unit">km/h</span>
+            </div>
+          </div>
+          <div class="cardio-field">
+            <label>平均速度</label>
+            <div class="cardio-input-wrap">
+              <input type="number" class="cardio-input" id="c-avgspd" placeholder="8.0"
+                inputmode="decimal" min="0" step="0.1" value="${c.avgSpd??''}" oninput="saveCardio()">
+              <span class="cardio-unit">km/h</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-save-cardio" onclick="saveCardioFinal()" style="margin-top:4px">記録を保存</button>
+      </div>
+
+      <div id="cardio-preview"></div>`;
+
+    renderCardioPreview();
+    return;
+  }
+
+  // 筋トレ（既存）
+  document.getElementById('set-edit-body').innerHTML=`
+    <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
+    ${dateRow}
     <div class="card">
       <div class="card-label" id="form-label">セットを追加</div>
       <div class="set-input-grid">
@@ -652,13 +785,67 @@ function renderSetEdit(){
       <div class="orm-preview" id="orm-prev">重量と回数を入力すると 1RM を表示します</div>
       <button class="btn-primary" id="btn-add-set" onclick="commitSet()" disabled>セットを追加</button>
     </div>
-
     <div class="card-label" id="set-count-label" style="padding:0 2px;margin-bottom:8px">記録済みセット</div>
     <div class="set-list" id="set-list"></div>`;
 
   renderSets();
 }
 
+// ===== CARDIO =====
+function saveCardio(){
+  // 入力のたびにリアルタイム保存
+  const sess=S.sessions[S.menu.id][S.sessionId];
+  if(!sess.cardio) sess.cardio={};
+  const v=id=>{ const el=document.getElementById(id); return el&&el.value!==''?parseFloat(el.value):null; };
+  sess.cardio={
+    time:   v('c-time'),
+    dist:   v('c-dist'),
+    cal:    v('c-cal'),
+    hr:     v('c-hr'),
+    maxSpd: v('c-maxspd'),
+    avgSpd: v('c-avgspd'),
+  };
+  persist();
+  renderCardioPreview();
+}
+
+function saveCardioFinal(){
+  saveCardio();
+  const c=S.sessions[S.menu.id][S.sessionId].cardio||{};
+  const missing=[];
+  if(c.time==null)  missing.push('合計時間');
+  if(c.dist==null)  missing.push('合計距離');
+  if(c.cal==null)   missing.push('消費カロリー');
+  if(c.hr==null)    missing.push('平均心拍数');
+  if(missing.length){ toast(`未入力項目: ${missing.join('・')}`); return; }
+  toast('記録を保存しました');
+  go('menu-detail');
+}
+
+function renderCardioPreview(){
+  const el=document.getElementById('cardio-preview');
+  if(!el) return;
+  const c=S.sessions[S.menu.id]?.[S.sessionId]?.cardio||{};
+  const hasAny=[c.time,c.dist,c.cal,c.hr].some(v=>v!=null);
+  if(!hasAny){ el.innerHTML=''; return; }
+  el.innerHTML=`
+    <div class="card-label" style="padding:0 2px;margin-bottom:8px">入力中のプレビュー</div>
+    <div class="cardio-record">
+      <div class="cardio-record-head">
+        <div class="cardio-record-title">${S.menu.name}</div>
+      </div>
+      <div class="cardio-stats">
+        ${c.time!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.time}<span style="font-size:12px;font-weight:400;color:var(--text3)"> 分</span></div><div class="cardio-stat-label">合計時間</div></div>`:''}
+        ${c.dist!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.dist}<span style="font-size:12px;font-weight:400;color:var(--text3)"> km</span></div><div class="cardio-stat-label">合計距離</div></div>`:''}
+        ${c.cal!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.cal}<span style="font-size:12px;font-weight:400;color:var(--text3)"> kcal</span></div><div class="cardio-stat-label">消費カロリー</div></div>`:''}
+        ${c.hr!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.hr}<span style="font-size:12px;font-weight:400;color:var(--text3)"> bpm</span></div><div class="cardio-stat-label">平均心拍数</div></div>`:''}
+        ${c.maxSpd!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.maxSpd}<span style="font-size:12px;font-weight:400;color:var(--text3)"> km/h</span></div><div class="cardio-stat-label">最大速度</div></div>`:''}
+        ${c.avgSpd!=null?`<div class="cardio-stat"><div class="cardio-stat-val">${c.avgSpd}<span style="font-size:12px;font-weight:400;color:var(--text3)"> km/h</span></div><div class="cardio-stat-label">平均速度</div></div>`:''}
+      </div>
+    </div>`;
+}
+
+// ===== SET EDIT (筋トレ) =====
 function updateSessionDate(val){
   if(!val||!S.sessionId) return;
   S.sessions[S.menu.id][S.sessionId].date=val;
