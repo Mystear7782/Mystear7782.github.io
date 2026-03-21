@@ -254,6 +254,26 @@ input,select{font-family:var(--font)}
 .cardio-stat-label{font-size:10px;color:var(--text3);margin-top:2px}
 .cardio-stat.full{grid-column:1/-1}
 
+/* CSV PAGE */
+.csv-section{margin-bottom:20px}
+.csv-section-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.csv-section-title svg{width:15px;height:15px;flex-shrink:0;color:var(--accent)}
+.csv-btn{display:flex;align-items:center;gap:10px;width:100%;padding:13px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:14px;font-weight:500;transition:all .18s;box-shadow:var(--shadow-xs);margin-bottom:8px;text-align:left}
+.csv-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:var(--shadow-sm)}
+.csv-btn svg{width:18px;height:18px;flex-shrink:0;color:var(--accent)}
+.csv-btn-sub{font-size:11px;color:var(--text3);margin-top:2px;font-weight:400}
+.csv-btn-body{flex:1}
+.csv-btn-label{font-size:14px;font-weight:600;color:inherit}
+.csv-notice{background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--amber-t);line-height:1.7;margin-bottom:14px}
+.csv-format-block{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px}
+.csv-format-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+.csv-format-code{font-size:11px;color:var(--text2);line-height:1.8;word-break:break-all;font-family:monospace}
+.csv-import-result{border-radius:var(--r-sm);padding:12px 14px;font-size:13px;line-height:1.7;margin-top:10px}
+.csv-import-result.ok{background:var(--green-bg);border:1px solid var(--green);color:var(--green-t)}
+.csv-import-result.err{background:var(--red-bg);border:1px solid var(--red);color:var(--red-t)}
+.import-file-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--accent);border-radius:var(--r-sm);color:#fff;font-size:15px;font-weight:700;transition:all .18s;box-shadow:var(--shadow-xs);cursor:pointer;border:none;font-family:var(--font)}
+.import-file-btn:hover{opacity:.9;transform:translateY(-1px)}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -282,9 +302,8 @@ input,select{font-family:var(--font)}
       <span class="sb-icon">📊</span>メニュー分析
       <span class="sb-badge">近日公開</span>
     </div>
-    <div class="sb-item disabled">
-      <span class="sb-icon">📥</span>CSV出力
-      <span class="sb-badge">近日公開</span>
+    <div class="sb-item" data-page="csv" onclick="go('csv')">
+      <span class="sb-icon">📥</span>CSV出力 / 入力
     </div>
   </nav>
 </div>
@@ -365,6 +384,72 @@ input,select{font-family:var(--font)}
         詳細に戻る
       </button>
       <div id="set-edit-body"></div>
+    </div>
+
+    <!-- CSV -->
+    <div class="page" id="page-csv">
+      <div class="sec-head">
+        <div class="sec-title">CSV出力 / 入力</div>
+        <div class="sec-sub">データのエクスポートとインポートができます</div>
+      </div>
+
+      <!-- エクスポート -->
+      <div class="csv-section">
+        <div class="csv-section-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v8M5 8l3 3 3-3"/><path d="M3 13h10"/></svg>
+          エクスポート
+        </div>
+        <button class="csv-btn" onclick="exportCSV('strength')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
+          <div class="csv-btn-body">
+            <div class="csv-btn-label">筋トレ記録をエクスポート</div>
+            <div class="csv-btn-sub">胸・背中・肩・足・腕のメニュー全件</div>
+          </div>
+        </button>
+        <button class="csv-btn" onclick="exportCSV('cardio')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
+          <div class="csv-btn-body">
+            <div class="csv-btn-label">有酸素運動記録をエクスポート</div>
+            <div class="csv-btn-sub">有酸素運動のメニュー全件</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- インポート -->
+      <div class="csv-section">
+        <div class="csv-section-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13V5M5 8l3-3 3 3"/><path d="M3 13h10"/></svg>
+          インポート
+        </div>
+        <div class="csv-notice">
+          ⚠️ インポートの仕様<br>
+          ・既存セッションと重複する場合はスキップします（上書きなし）<br>
+          ・CSVに存在しないメニュー名は自動で新規作成します<br>
+          ・インポート前にエクスポートでバックアップを取ることを推奨します
+        </div>
+        <label class="import-file-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M8 13V5M5 8l3-3 3 3"/><path d="M3 13h10"/></svg>
+          CSVファイルを選択してインポート
+          <input type="file" accept=".csv,text/csv" style="display:none" onchange="importCSV(this)">
+        </label>
+        <div id="import-result"></div>
+      </div>
+
+      <!-- フォーマット説明 -->
+      <div class="csv-section">
+        <div class="csv-section-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 7v5M8 5v1"/></svg>
+          CSVフォーマット
+        </div>
+        <div class="csv-format-block">
+          <div class="csv-format-title">筋トレ用</div>
+          <div class="csv-format-code">menu_name,category,type,date,session_id,set_no,weight_kg,reps</div>
+        </div>
+        <div class="csv-format-block">
+          <div class="csv-format-title">有酸素運動用</div>
+          <div class="csv-format-code">menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh</div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -467,7 +552,7 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録','csv':'CSV出力 / 入力'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -621,6 +706,7 @@ function renderDetail(){
     <div class="menu-actions">
       ${!m.archived?`<button class="btn-action new-sess" onclick="openSetEdit(null)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>新規セッション</button>`:''}
       ${archBtn}
+      <button class="btn-action" style="border-color:var(--green);color:var(--green-t);background:var(--green-bg)" onclick="exportMenuCSV('${m.id}')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M8 3v8M5 8l3 3 3-3"/><path d="M3 13h10"/></svg>CSV出力</button>
       <button class="btn-action delete" onclick="deleteMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V3h4v1M5 4l.5 9h5l.5-9"/></svg>完全削除</button>
     </div>
     ${sessList.length?`
@@ -943,6 +1029,191 @@ function renderSets(){
       <button class="btn-del" onclick="event.stopPropagation();deleteSet(${i})">✕</button>
     </div>`;
   }).join('');
+}
+
+// ===== CSV =====
+
+// CSVダウンロード共通
+function downloadCSV(filename, content) {
+  const bom = '\uFEFF'; // Excel用BOM
+  const blob = new Blob([bom + content], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// 筋トレCSV行生成
+function buildStrengthRows(menus) {
+  const rows = ['menu_name,category,type,date,session_id,set_no,weight_kg,reps'];
+  for (const m of menus) {
+    const sessMap = S.sessions[m.id] || {};
+    const sessList = Object.entries(sessMap)
+      .map(([id,s])=>({id,...s}))
+      .sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+    for (const sess of sessList) {
+      (sess.sets||[]).forEach((s,i) => {
+        rows.push([
+          `"${m.name}"`, m.category, m.type,
+          sess.date, sess.id, i+1, s.w, s.r
+        ].join(','));
+      });
+    }
+  }
+  return rows.join('\r\n');
+}
+
+// 有酸素CSVの行生成
+function buildCardioRows(menus) {
+  const rows = ['menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh'];
+  for (const m of menus) {
+    const sessMap = S.sessions[m.id] || {};
+    const sessList = Object.entries(sessMap)
+      .map(([id,s])=>({id,...s}))
+      .sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+    for (const sess of sessList) {
+      const c = sess.cardio || {};
+      rows.push([
+        `"${m.name}"`, m.category,
+        sess.date, sess.id,
+        c.time??'', c.dist??'', c.cal??'', c.hr??'',
+        c.maxSpd??'', c.avgSpd??''
+      ].join(','));
+    }
+  }
+  return rows.join('\r\n');
+}
+
+// 全体エクスポート
+function exportCSV(type) {
+  const d = today();
+  if (type === 'strength') {
+    const menus = S.menus.filter(m => m.category !== '有酸素運動');
+    if (!menus.length) { toast('筋トレメニューがありません'); return; }
+    downloadCSV(`gymlog_strength_${d}.csv`, buildStrengthRows(menus));
+    toast('筋トレCSVをエクスポートしました');
+  } else {
+    const menus = S.menus.filter(m => m.category === '有酸素運動');
+    if (!menus.length) { toast('有酸素運動メニューがありません'); return; }
+    downloadCSV(`gymlog_cardio_${d}.csv`, buildCardioRows(menus));
+    toast('有酸素運動CSVをエクスポートしました');
+  }
+}
+
+// 個別メニューエクスポート
+function exportMenuCSV(menuId) {
+  const m = S.menus.find(x => x.id === menuId);
+  if (!m) return;
+  const d = today();
+  const safeName = m.name.replace(/[\\/:*?"<>|]/g, '_');
+  if (isCardioMenu(m)) {
+    downloadCSV(`gymlog_${safeName}_${d}.csv`, buildCardioRows([m]));
+  } else {
+    downloadCSV(`gymlog_${safeName}_${d}.csv`, buildStrengthRows([m]));
+  }
+  toast(`「${m.name}」のCSVをエクスポートしました`);
+}
+
+// CSVパース（簡易：引用符対応）
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  return lines.map(line => {
+    const cols = []; let cur = ''; let inQ = false;
+    for (let i=0; i<line.length; i++) {
+      const c = line[i];
+      if (c==='"') { inQ=!inQ; }
+      else if (c===',' && !inQ) { cols.push(cur.trim()); cur=''; }
+      else { cur+=c; }
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+// インポート
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    try {
+      const rows = parseCSV(text);
+      if (rows.length < 2) { showImportResult('err','データが空です'); return; }
+      const header = rows[0].map(h=>h.toLowerCase().replace(/"/g,''));
+      const isCardio = header.includes('time_min') || header.includes('dist_km');
+      let imported=0, skipped=0, menuCreated=0;
+
+      // ヘッダーインデックス取得
+      const col = k => header.indexOf(k);
+
+      for (let i=1; i<rows.length; i++) {
+        const r = rows[i];
+        if (r.length < 4) continue;
+        const menuName = r[col('menu_name')]?.replace(/^"|"$/g,'');
+        const category = r[col('category')];
+        const date     = r[col('date')];
+        const sessId   = r[col('session_id')];
+        if (!menuName||!category||!date||!sessId) continue;
+
+        // メニュー存在確認・なければ新規作成
+        let menu = S.menus.find(m=>m.name===menuName&&m.category===category);
+        if (!menu) {
+          const type = isCardio ? '有酸素運動' : (r[col('type')]||'マシン');
+          menu = {id:'menu_imp_'+Date.now()+'_'+i, name:menuName, category, type, archived:false};
+          S.menus.push(menu);
+          menuCreated++;
+        }
+
+        // セッション重複チェック（既存IDと完全一致）
+        if (!S.sessions[menu.id]) S.sessions[menu.id] = {};
+        if (S.sessions[menu.id][sessId]) { skipped++; continue; }
+
+        if (isCardio) {
+          S.sessions[menu.id][sessId] = {
+            date,
+            cardio: {
+              time:   r[col('time_min')]!==''   ? +r[col('time_min')]   : null,
+              dist:   r[col('dist_km')]!==''    ? +r[col('dist_km')]    : null,
+              cal:    r[col('cal_kcal')]!==''   ? +r[col('cal_kcal')]   : null,
+              hr:     r[col('hr_bpm')]!==''     ? +r[col('hr_bpm')]     : null,
+              maxSpd: r[col('max_spd_kmh')]!==''? +r[col('max_spd_kmh')]: null,
+              avgSpd: r[col('avg_spd_kmh')]!==''? +r[col('avg_spd_kmh')]: null,
+            }
+          };
+          imported++;
+        } else {
+          // 筋トレ：同sessIdで複数行 → setsに追加
+          if (!S.sessions[menu.id][sessId]) {
+            S.sessions[menu.id][sessId] = {date, sets:[]};
+          }
+          const w = parseFloat(r[col('weight_kg')]);
+          const rep = parseInt(r[col('reps')]);
+          if (!isNaN(w) && !isNaN(rep)) {
+            S.sessions[menu.id][sessId].sets.push({w,r:rep});
+            imported++;
+          }
+        }
+      }
+
+      persist();
+      const msgs = [`${imported}件をインポートしました`];
+      if (menuCreated) msgs.push(`新規メニュー ${menuCreated}件を自動作成`);
+      if (skipped)     msgs.push(`重複 ${skipped}件をスキップ`);
+      showImportResult('ok', msgs.join('\n'));
+    } catch(err) {
+      showImportResult('err', 'CSVの読み込みに失敗しました\n'+err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function showImportResult(type, msg) {
+  const el = document.getElementById('import-result');
+  if (!el) return;
+  el.className = `csv-import-result ${type}`;
+  el.textContent = msg;
 }
 
 if('serviceWorker' in navigator){
