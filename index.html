@@ -423,8 +423,9 @@ input,select{font-family:var(--font)}
         </div>
         <div class="csv-notice">
           ⚠️ インポートの仕様<br>
-          ・既存セッションと重複する場合はスキップします（上書きなし）<br>
-          ・CSVに存在しないメニュー名は自動で新規作成します<br>
+          ・既存セッションと重複する場合はスキップします（上書きなし・INSERT方式）<br>
+          ・CSVに記載されているメニュー名がアプリ未登録の場合、自動で新規登録します<br>
+          ・session_idは空欄でもOK。空欄の場合は同日同メニューを同一セッションにまとめます<br>
           ・インポート前にエクスポートでバックアップを取ることを推奨します
         </div>
         <label class="import-file-btn">
@@ -442,12 +443,16 @@ input,select{font-family:var(--font)}
           CSVフォーマット
         </div>
         <div class="csv-format-block">
-          <div class="csv-format-title">筋トレ用</div>
-          <div class="csv-format-code">menu_name,category,type,date,session_id,set_no,weight_kg,reps</div>
+          <div class="csv-format-title">筋トレ用（エクスポート列）</div>
+          <div class="csv-format-code">menu_name, category, type, date, session_id, set_no, weight_kg, reps, estimated_1rm_kg, volume_kg</div>
         </div>
         <div class="csv-format-block">
-          <div class="csv-format-title">有酸素運動用</div>
-          <div class="csv-format-code">menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh</div>
+          <div class="csv-format-title">有酸素運動用（エクスポート列）</div>
+          <div class="csv-format-code">menu_name, category, date, session_id, time_min, dist_km, cal_kcal, hr_bpm, max_spd_kmh, avg_spd_kmh</div>
+        </div>
+        <div class="csv-format-block">
+          <div class="csv-format-title">手入力インポート時のsession_idの扱い</div>
+          <div class="csv-format-code">session_idは空欄でOK。空欄の場合、同じ日付・同じメニューの行は自動的に1セッションにまとめられます。</div>
         </div>
       </div>
     </div>
@@ -1043,9 +1048,9 @@ function downloadCSV(filename, content) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// 筋トレCSV行生成
+// ① 筋トレCSV行生成（推定1RM・ボリューム列追加）
 function buildStrengthRows(menus) {
-  const rows = ['menu_name,category,type,date,session_id,set_no,weight_kg,reps'];
+  const rows = ['menu_name,category,type,date,session_id,set_no,weight_kg,reps,estimated_1rm_kg,volume_kg'];
   for (const m of menus) {
     const sessMap = S.sessions[m.id] || {};
     const sessList = Object.entries(sessMap)
@@ -1053,9 +1058,11 @@ function buildStrengthRows(menus) {
       .sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
     for (const sess of sessList) {
       (sess.sets||[]).forEach((s,i) => {
+        const e1rm = orm(s.w, s.r);
+        const vol  = +(s.w * s.r).toFixed(1);
         rows.push([
           `"${m.name}"`, m.category, m.type,
-          sess.date, sess.id, i+1, s.w, s.r
+          sess.date, sess.id, i+1, s.w, s.r, e1rm, vol
         ].join(','));
       });
     }
@@ -1063,7 +1070,7 @@ function buildStrengthRows(menus) {
   return rows.join('\r\n');
 }
 
-// 有酸素CSVの行生成
+// 有酸素CSVの行生成（変更なし）
 function buildCardioRows(menus) {
   const rows = ['menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh'];
   for (const m of menus) {
@@ -1114,7 +1121,7 @@ function exportMenuCSV(menuId) {
   toast(`「${m.name}」のCSVをエクスポートしました`);
 }
 
-// CSVパース（簡易：引用符対応）
+// CSVパース（引用符対応）
 function parseCSV(text) {
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
   return lines.map(line => {
@@ -1130,7 +1137,7 @@ function parseCSV(text) {
   });
 }
 
-// インポート
+// ④ インポート：session_id空欄時は日付+メニューIDで自動発行
 function importCSV(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1140,57 +1147,68 @@ function importCSV(input) {
     try {
       const rows = parseCSV(text);
       if (rows.length < 2) { showImportResult('err','データが空です'); return; }
-      const header = rows[0].map(h=>h.toLowerCase().replace(/"/g,''));
+      const header = rows[0].map(h=>h.toLowerCase().replace(/"/g,'').trim());
       const isCardio = header.includes('time_min') || header.includes('dist_km');
       let imported=0, skipped=0, menuCreated=0;
-
-      // ヘッダーインデックス取得
       const col = k => header.indexOf(k);
+
+      // ④ session_id空欄時の自動割当: "日付_メニューID" をキーにセッションを一意化
+      const autoSessMap = {}; // key: `${menuId}_${date}` → sessId
 
       for (let i=1; i<rows.length; i++) {
         const r = rows[i];
         if (r.length < 4) continue;
-        const menuName = r[col('menu_name')]?.replace(/^"|"$/g,'');
-        const category = r[col('category')];
-        const date     = r[col('date')];
-        const sessId   = r[col('session_id')];
-        if (!menuName||!category||!date||!sessId) continue;
+        const menuName = r[col('menu_name')]?.replace(/^"|"$/g,'').trim();
+        const category = r[col('category')]?.trim();
+        const date     = r[col('date')]?.trim();
+        const rawSessId = col('session_id') >= 0 ? r[col('session_id')]?.trim() : '';
+        if (!menuName||!category||!date) continue;
 
-        // メニュー存在確認・なければ新規作成
+        // ③ メニュー存在確認・アプリ未登録なら自動新規登録
         let menu = S.menus.find(m=>m.name===menuName&&m.category===category);
         if (!menu) {
-          const type = isCardio ? '有酸素運動' : (r[col('type')]||'マシン');
+          const type = isCardio ? '有酸素運動' : (col('type')>=0 ? r[col('type')]?.trim()||'マシン' : 'マシン');
           menu = {id:'menu_imp_'+Date.now()+'_'+i, name:menuName, category, type, archived:false};
           S.menus.push(menu);
           menuCreated++;
         }
-
-        // セッション重複チェック（既存IDと完全一致）
         if (!S.sessions[menu.id]) S.sessions[menu.id] = {};
-        if (S.sessions[menu.id][sessId]) { skipped++; continue; }
+
+        // ④ session_id決定ロジック
+        let sessId = rawSessId;
+        if (!sessId) {
+          // 空欄の場合：同日同メニューを同一セッションにまとめる
+          const autoKey = `${menu.id}_${date}`;
+          if (!autoSessMap[autoKey]) {
+            autoSessMap[autoKey] = 'sess_imp_' + Date.now() + '_' + i;
+          }
+          sessId = autoSessMap[autoKey];
+        }
 
         if (isCardio) {
+          // 有酸素：sessId重複はスキップ
+          if (S.sessions[menu.id][sessId]) { skipped++; continue; }
           S.sessions[menu.id][sessId] = {
             date,
             cardio: {
-              time:   r[col('time_min')]!==''   ? +r[col('time_min')]   : null,
-              dist:   r[col('dist_km')]!==''    ? +r[col('dist_km')]    : null,
-              cal:    r[col('cal_kcal')]!==''   ? +r[col('cal_kcal')]   : null,
-              hr:     r[col('hr_bpm')]!==''     ? +r[col('hr_bpm')]     : null,
-              maxSpd: r[col('max_spd_kmh')]!==''? +r[col('max_spd_kmh')]: null,
-              avgSpd: r[col('avg_spd_kmh')]!==''? +r[col('avg_spd_kmh')]: null,
+              time:   r[col('time_min')]!==''    ? +r[col('time_min')]    : null,
+              dist:   r[col('dist_km')]!==''     ? +r[col('dist_km')]     : null,
+              cal:    r[col('cal_kcal')]!==''    ? +r[col('cal_kcal')]    : null,
+              hr:     r[col('hr_bpm')]!==''      ? +r[col('hr_bpm')]      : null,
+              maxSpd: col('max_spd_kmh')>=0&&r[col('max_spd_kmh')]!=='' ? +r[col('max_spd_kmh')] : null,
+              avgSpd: col('avg_spd_kmh')>=0&&r[col('avg_spd_kmh')]!=='' ? +r[col('avg_spd_kmh')] : null,
             }
           };
           imported++;
         } else {
-          // 筋トレ：同sessIdで複数行 → setsに追加
+          // 筋トレ：同sessIdで複数行 → setsに追加（重複sessIdはINSERT継続）
           if (!S.sessions[menu.id][sessId]) {
             S.sessions[menu.id][sessId] = {date, sets:[]};
           }
-          const w = parseFloat(r[col('weight_kg')]);
+          const w   = parseFloat(r[col('weight_kg')]);
           const rep = parseInt(r[col('reps')]);
           if (!isNaN(w) && !isNaN(rep)) {
-            S.sessions[menu.id][sessId].sets.push({w,r:rep});
+            S.sessions[menu.id][sessId].sets.push({w, r:rep});
             imported++;
           }
         }
@@ -1198,7 +1216,7 @@ function importCSV(input) {
 
       persist();
       const msgs = [`${imported}件をインポートしました`];
-      if (menuCreated) msgs.push(`新規メニュー ${menuCreated}件を自動作成`);
+      if (menuCreated) msgs.push(`未登録メニュー ${menuCreated}件を新規登録`);
       if (skipped)     msgs.push(`重複 ${skipped}件をスキップ`);
       showImportResult('ok', msgs.join('\n'));
     } catch(err) {
