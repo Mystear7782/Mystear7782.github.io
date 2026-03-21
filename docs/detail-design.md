@@ -6,6 +6,7 @@
 |---|---|---|
 | 1.0 | 2026-03-21 | 初版作成 |
 | 1.1 | 2026-03-21 | 有酸素運動専用記録機能を追加 |
+| 1.2 | 2026-03-22 | CSV出力・インポート機能を追加 |
 
 ---
 
@@ -451,3 +452,99 @@ const persist = () => {
   localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
 };
 ```
+
+---
+
+## 7. CSV機能設計
+
+### 7.1 エクスポート
+
+#### 筋トレCSVフォーマット
+
+```
+menu_name,category,type,date,session_id,set_no,weight_kg,reps,estimated_1rm_kg,volume_kg
+```
+
+| 列名 | 内容 | 備考 |
+|---|---|---|
+| menu_name | メニュー名 | 引用符付きで出力 |
+| category | 部位 | 胸 / 背中 / 肩 / 足 / 腕 |
+| type | 種別 | マシン / フリーウェイト / 自重運動 |
+| date | 記録日 | YYYY-MM-DD形式 |
+| session_id | セッションID | アプリ内部ID（再インポート時の重複検知に使用） |
+| set_no | セット番号 | 1始まりの連番 |
+| weight_kg | 使用重量（kg） | |
+| reps | 挙上回数（回） | |
+| estimated_1rm_kg | 推定1RM（kg） | O'Conner式で自動計算 |
+| volume_kg | セット内ボリューム（kg） | 重量 × 回数 |
+
+#### 有酸素運動CSVフォーマット
+
+```
+menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh
+```
+
+| 列名 | 内容 | 備考 |
+|---|---|---|
+| menu_name | メニュー名 | 引用符付きで出力 |
+| category | 部位 | 有酸素運動 固定 |
+| date | 記録日 | YYYY-MM-DD形式 |
+| session_id | セッションID | |
+| time_min | 合計時間（分） | |
+| dist_km | 合計距離（km） | |
+| cal_kcal | 消費カロリー（kcal） | |
+| hr_bpm | 平均心拍数（bpm） | |
+| max_spd_kmh | 最大速度（km/h） | 未入力時は空欄 |
+| avg_spd_kmh | 平均速度（km/h） | 未入力時は空欄 |
+
+#### エクスポートの操作場所
+
+| 操作場所 | 出力範囲 |
+|---|---|
+| サイドバー「CSV出力 / 入力」→ 筋トレ記録をエクスポート | 全筋トレメニュー一括 |
+| サイドバー「CSV出力 / 入力」→ 有酸素運動記録をエクスポート | 全有酸素メニュー一括 |
+| メニュー詳細画面「CSV出力」ボタン | そのメニュー単体（筋トレ・有酸素を自動判定） |
+
+ファイル名形式：`gymlog_{メニュー名 or strength/cardio}_{YYYY-MM-DD}.csv`
+エンコード：UTF-8 BOM付き（Excel文字化け対策）
+
+---
+
+### 7.2 インポート
+
+#### 処理方針
+
+| ケース | 動作 |
+|---|---|
+| 重複セッション（session_idが一致） | スキップ（既存データ優先・INSERT方式） |
+| アプリ未登録のメニュー名 | 自動で新規メニューを登録してから取り込む |
+| session_idが空欄 | 同日・同メニューの行を同一セッションに自動まとめ |
+| session_idが記載あり | そのIDで重複チェック（GymLogからの再インポート向け） |
+
+#### session_id の扱い
+
+```
+【GymLogからエクスポートしたCSVを再インポートする場合】
+  session_idあり → 既存IDと照合 → 重複ならスキップ
+
+【他アプリ・手入力CSVをインポートする場合】
+  session_id空欄 → 同日同メニューをキーに自動セッションID発行
+  例: 同じ日付・同じメニュー名の行は全て1セッションにまとめられる
+```
+
+手入力CSVのサンプル（session_id空欄）：
+
+```csv
+menu_name,category,type,date,session_id,set_no,weight_kg,reps
+ベンチプレス,胸,フリーウェイト,2026-03-10,,1,80,10
+ベンチプレス,胸,フリーウェイト,2026-03-10,,2,85,8
+ベンチプレス,胸,フリーウェイト,2026-03-10,,3,82,6
+```
+
+#### 結果表示
+
+インポート完了後、画面上に以下の件数を表示する。
+
+- インポートした件数
+- 未登録メニューの新規登録件数
+- 重複スキップ件数
