@@ -976,7 +976,8 @@ function saveCardio(){
   // 入力のたびにリアルタイム保存
   const sess=S.sessions[S.menu.id][S.sessionId];
   if(!sess.cardio) sess.cardio={};
-  const v=id=>{ const el=document.getElementById(id); return el&&el.value!==''?parseFloat(el.value):null; };
+  // 空文字・0以下はnull扱い（0分・0km等は無効値として扱う）
+  const v=id=>{ const el=document.getElementById(id); if(!el||el.value==='') return null; const n=parseFloat(el.value); return n>0?n:null; };
   sess.cardio={
     time:   v('c-time'),
     dist:   v('c-dist'),
