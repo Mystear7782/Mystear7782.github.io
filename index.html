@@ -542,6 +542,11 @@ const S = {
   fromCalendar: false, // カレンダーから遷移したかどうか
 };
 
+const persist = () => {
+  localStorage.setItem('gl_menus',    JSON.stringify(S.menus));
+  localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
+};
+
 // 旧形式(gl_history)からの自動マイグレーション
 (function migrate() {
   const old = localStorage.getItem('gl_history');
@@ -570,11 +575,6 @@ const S = {
   }
   if (changed) persist();
 })();
-
-const persist = () => {
-  localStorage.setItem('gl_menus',    JSON.stringify(S.menus));
-  localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
-};
 
 // ===== UTILS =====
 const orm = (w,r) => +(w*(1+r/40)).toFixed(1);
