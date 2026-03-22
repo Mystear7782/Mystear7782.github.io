@@ -210,6 +210,7 @@ input,select{font-family:var(--font)}
 .date-row label{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 .date-input{flex:1;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:14px;padding:8px 12px;border-radius:var(--r-xs);outline:none;transition:border-color .18s;min-width:0}
 .date-input:focus{border-color:var(--accent)}
+.time-input{flex:0 0 110px;min-width:0}
 
 .set-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .input-box label{display:block;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase}
@@ -551,12 +552,23 @@ const S = {
       if (!S.sessions[menuId]) S.sessions[menuId] = {};
       for (const [date, sets] of Object.entries(dateMap)) {
         const sid = 'sess_migrated_' + menuId.slice(-6) + '_' + date;
-        if (!S.sessions[menuId][sid]) S.sessions[menuId][sid] = { date, sets };
+        if (!S.sessions[menuId][sid]) S.sessions[menuId][sid] = { date, time:'00:00', sets };
       }
     }
     localStorage.removeItem('gl_history');
     persist();
   } catch(e) {}
+})();
+
+// B-05: 既存セッションにtimeフィールドがなければ'00:00'でマイグレーション
+(function migrateTime() {
+  let changed = false;
+  for (const sessMap of Object.values(S.sessions)) {
+    for (const sess of Object.values(sessMap)) {
+      if (sess.time === undefined) { sess.time = '00:00'; changed = true; }
+    }
+  }
+  if (changed) persist();
 })();
 
 const persist = () => {
@@ -734,8 +746,9 @@ function renderDetail(){
   if(isCardioMenu(m)){
     for(const sess of sessList){
       const c=sess.cardio||{};
+      const timeLabel=sess.time&&sess.time!=='00:00'?`<div style="font-size:10px;color:var(--text3)">${sess.time}</div>`:'';
       rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
-        <td class="td-date">${fmtDate(sess.date)}</td>
+        <td class="td-date">${fmtDate(sess.date)}${timeLabel}</td>
         <td>${c.time!=null?c.time+' 分':'—'}</td>
         <td>${c.dist!=null?c.dist+' km':'—'}</td>
         <td class="td-vol">${c.cal!=null?c.cal+' kcal':'—'}</td>
@@ -747,8 +760,9 @@ function renderDetail(){
       let mxO=0,vol=0,mxW=0;
       (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;});
       const cnt=(sess.sets||[]).length;
+      const timeLabel=sess.time&&sess.time!=='00:00'?`<div style="font-size:10px;color:var(--text3)">${sess.time}</div>`:'';
       rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
-        <td class="td-date">${fmtDate(sess.date)}</td>
+        <td class="td-date">${fmtDate(sess.date)}${timeLabel}</td>
         <td style="color:var(--text3)">${cnt}セット</td>
         <td>${mxW>0?mxW+' kg':'—'}</td>
         <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
@@ -827,8 +841,8 @@ function openSetEdit(sid){
     if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
     // 有酸素は cardio オブジェクト、筋トレは sets 配列で初期化
     const init = isCardioMenu(S.menu)
-      ? {date:today(), cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
-      : {date:today(), sets:[]};
+      ? {date:today(), time:'00:00', cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
+      : {date:today(), time:'00:00', sets:[]};
     S.sessions[S.menu.id][newId]=init;
     persist();
     S.sessionId=newId;
@@ -847,13 +861,14 @@ function renderSetEdit(){
   const dateRow=`
     <div class="date-row">
       <label>記録日</label>
-      <input type="date" class="date-input" id="sess-date" value="${sess.date}" onchange="updateSessionDate(this.value)">
+      <input type="date" class="date-input" id="sess-date" value="${sess.date}" onchange="updateSessionDateTime()">
+      <input type="time" class="date-input time-input" id="sess-time" value="${sess.time||'00:00'}" onchange="updateSessionDateTime()">
     </div>`;
 
   if(isCardioMenu(S.menu)){
     const c=sess.cardio||{};
     document.getElementById('set-edit-body').innerHTML=`
-      <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
+      <div class="set-session-bar">📋 <strong>${S.menu.name}</strong>${sess.time&&sess.time!=='00:00'?` <span style="font-size:11px;color:var(--nav-text)">· ${sess.time}</span>`:''}</div>
       ${dateRow}
       <div class="card">
         <div class="card-label">有酸素記録</div>
@@ -925,7 +940,7 @@ function renderSetEdit(){
 
   // 筋トレ（既存）
   document.getElementById('set-edit-body').innerHTML=`
-    <div class="set-session-bar">📋 <strong>${S.menu.name}</strong></div>
+    <div class="set-session-bar">📋 <strong>${S.menu.name}</strong>${sess.time&&sess.time!=='00:00'?` <span style="font-size:11px;color:var(--nav-text)">· ${sess.time}</span>`:''}</div>
     ${dateRow}
     <div class="card">
       <div class="card-label" id="form-label">セットを追加</div>
@@ -1012,9 +1027,12 @@ function renderCardioPreview(){
 }
 
 // ===== SET EDIT (筋トレ) =====
-function updateSessionDate(val){
-  if(!val||!S.sessionId) return;
-  S.sessions[S.menu.id][S.sessionId].date=val;
+function updateSessionDateTime(){
+  if(!S.sessionId) return;
+  const date = document.getElementById('sess-date')?.value;
+  const time = document.getElementById('sess-time')?.value;
+  if(date) S.sessions[S.menu.id][S.sessionId].date=date;
+  if(time!==undefined) S.sessions[S.menu.id][S.sessionId].time=time||'00:00';
   persist();
 }
 
