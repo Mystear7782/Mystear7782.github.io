@@ -323,6 +323,26 @@ input,select{font-family:var(--font)}
 .chart-title{font-size:14px;font-weight:700;color:var(--text)}
 .chart-wrap{position:relative;height:200px}
 
+/* RM CALCULATOR */
+.rm-input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.rm-input-box{display:flex;flex-direction:column;gap:5px}
+.rm-input-box label{font-size:12px;color:var(--text3)}
+.rm-input-wrap{position:relative}
+.rm-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.rm-result-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center}
+.rm-result-label{font-size:11px;color:var(--text3);margin-bottom:4px;line-height:1.4}
+.rm-result-val{font-size:22px;font-weight:700;color:var(--accent)}
+.rm-result-unit{font-size:12px;font-weight:400;color:var(--text3)}
+.rm-max-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.rm-max-row label{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap}
+.rm-rep-table{width:100%;border-collapse:collapse;font-size:13px}
+.rm-rep-table th{padding:8px 6px;font-size:11px;font-weight:700;color:var(--text3);text-align:center;border-bottom:1px solid var(--border);background:var(--bg3);letter-spacing:.5px}
+.rm-rep-table td{padding:9px 6px;text-align:center;border-bottom:1px solid var(--border);color:var(--text2)}
+.rm-rep-table tr:last-child td{border-bottom:none}
+.rm-rep-table tr.rm-highlight td{background:var(--accent-bg);font-weight:700;color:var(--accent-t)}
+.rm-rep-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text3)}
+.rm-rep-table tr.rm-highlight .rm-rep-badge{background:var(--accent);border-color:var(--accent);color:#fff}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -349,6 +369,9 @@ input,select{font-family:var(--font)}
     <div class="sb-sec">分析・データ</div>
     <div class="sb-item" data-page="analysis" onclick="go('analysis')">
       <span class="sb-icon">📊</span>メニュー分析
+    </div>
+    <div class="sb-item" data-page="rm" onclick="go('rm')">
+      <span class="sb-icon">🔢</span>RM換算表
     </div>
     <div class="sb-item" data-page="csv" onclick="go('csv')">
       <span class="sb-icon">📥</span>CSV出力 / 入力
@@ -455,6 +478,68 @@ input,select{font-family:var(--font)}
         分析に戻る
       </button>
       <div id="analysis-detail-body"></div>
+    </div>
+
+    <!-- RM CALCULATOR -->
+    <div class="page" id="page-rm">
+      <div class="sec-head">
+        <div class="sec-title">RM換算表</div>
+        <div class="sec-sub">推定1RMの計算と1〜10rep換算を行います</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">推定1RM 計算</div>
+        <div class="rm-input-row">
+          <div class="rm-input-box">
+            <label>使用重量</label>
+            <div class="rm-input-wrap">
+              <input type="number" class="big-input" id="rm-inp-w" placeholder="80"
+                inputmode="decimal" min="0" step="0.5" oninput="calcRM()">
+              <span class="big-unit">kg</span>
+            </div>
+          </div>
+          <div class="rm-input-box">
+            <label>挙上回数</label>
+            <div class="rm-input-wrap">
+              <input type="number" class="big-input" id="rm-inp-r" placeholder="10"
+                inputmode="numeric" min="1" max="20" step="1" oninput="calcRM()">
+              <span class="big-unit">回</span>
+            </div>
+          </div>
+        </div>
+        <div id="rm-orm-result" style="display:none">
+          <div class="rm-result-grid">
+            <div class="rm-result-card">
+              <div class="rm-result-label">ベンチプレス 推定1RM</div>
+              <div class="rm-result-val"><span id="rm-bp-val">—</span><span class="rm-result-unit"> kg</span></div>
+            </div>
+            <div class="rm-result-card">
+              <div class="rm-result-label">スクワット / デッドリフト 推定1RM</div>
+              <div class="rm-result-val"><span id="rm-sq-val">—</span><span class="rm-result-unit"> kg</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">1〜10rep 換算一覧</div>
+        <div class="rm-max-row">
+          <label>現在の最大RM</label>
+          <div style="position:relative;flex:1">
+            <input type="number" class="big-input" id="rm-inp-max" placeholder="例：100"
+              inputmode="decimal" min="0" step="0.5" oninput="calcRMTable()" style="font-size:16px;padding:10px 40px 10px 12px">
+            <span class="big-unit">kg</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:12px">推定1RM計算から自動入力されます</div>
+        <div id="rm-table-wrap">
+          <div class="empty-state" style="padding:20px 0">
+            <div class="empty-icon" style="font-size:24px">🔢</div>
+            <div class="empty-title">最大RMを入力してください</div>
+            <div class="empty-desc">重量と回数を入力するか、最大RMを直接入力してください</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CSV -->
@@ -640,7 +725,7 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -652,6 +737,7 @@ function go(page) {
   if(page==='set-edit')    renderSetEdit();
   if(page==='analysis')    renderAnalysis();
   if(page==='analysis-detail') renderAnalysisDetail();
+  if(page==='rm')          initRMPage();
 }
 
 // ===== ADD MENU =====
@@ -1444,6 +1530,98 @@ function drawChart(key, labels, data) {
 
   if (key==='vol') anaState.volChart=chart;
   if (key==='orm') anaState.ormChart=chart;
+}
+
+// ===== RM CALCULATOR =====
+
+// ページ遷移時にフォームをリセット
+function initRMPage() {
+  document.getElementById('rm-inp-w').value = '';
+  document.getElementById('rm-inp-r').value = '';
+  document.getElementById('rm-inp-max').value = '';
+  document.getElementById('rm-orm-result').style.display = 'none';
+  document.getElementById('rm-table-wrap').innerHTML = `
+    <div class="empty-state" style="padding:20px 0">
+      <div class="empty-icon" style="font-size:24px">🔢</div>
+      <div class="empty-title">最大RMを入力してください</div>
+      <div class="empty-desc">重量と回数を入力するか、最大RMを直接入力してください</div>
+    </div>`;
+}
+
+// 推定1RM計算（ベンチプレス）: w × r ÷ 40 + w
+function rmBP(w, r) { return w * r / 40 + w; }
+
+// 推定1RM計算（スクワット・デッドリフト）: w × r ÷ 33.3 + w
+function rmSQ(w, r) { return w * r / 33.3 + w; }
+
+// 逆算: Nrepで扱える重量 = 1RM ÷ (r ÷ divisor + 1)
+function rmWeightFromMax(max, r, divisor) { return max / (r / divisor + 1); }
+
+// 小数点1桁に丸め
+function rmRound(n) { return Math.round(n * 10) / 10; }
+
+// 推定1RM計算（入力ごとに呼ばれる）
+function calcRM() {
+  const w = parseFloat(document.getElementById('rm-inp-w').value);
+  const r = parseInt(document.getElementById('rm-inp-r').value);
+  const resultEl = document.getElementById('rm-orm-result');
+
+  if (w > 0 && r >= 1) {
+    const bp = rmRound(rmBP(w, r));
+    const sq = rmRound(rmSQ(w, r));
+    document.getElementById('rm-bp-val').textContent = bp;
+    document.getElementById('rm-sq-val').textContent = sq;
+    resultEl.style.display = 'block';
+    // 最大RM欄に自動連動（ベンチプレスの値をデフォルトに）
+    document.getElementById('rm-inp-max').value = bp;
+    calcRMTable();
+  } else {
+    resultEl.style.display = 'none';
+  }
+}
+
+// 1〜10rep 換算テーブル描画
+function calcRMTable() {
+  const maxVal = parseFloat(document.getElementById('rm-inp-max').value);
+  const wrap = document.getElementById('rm-table-wrap');
+
+  if (!maxVal || maxVal <= 0) {
+    wrap.innerHTML = `
+      <div class="empty-state" style="padding:20px 0">
+        <div class="empty-icon" style="font-size:24px">🔢</div>
+        <div class="empty-title">最大RMを入力してください</div>
+        <div class="empty-desc">重量と回数を入力するか、最大RMを直接入力してください</div>
+      </div>`;
+    return;
+  }
+
+  const inputReps = parseInt(document.getElementById('rm-inp-r').value) || 0;
+  let rows = '';
+  for (let rep = 1; rep <= 10; rep++) {
+    // 1repは最大RM自体
+    const bpW = rep === 1 ? maxVal : rmRound(rmWeightFromMax(maxVal, rep, 40));
+    const sqW = rep === 1 ? maxVal : rmRound(rmWeightFromMax(maxVal, rep, 33.3));
+    const isHL = rep === inputReps;
+    rows += `<tr class="${isHL ? 'rm-highlight' : ''}">
+      <td><span class="rm-rep-badge">${rep}</span></td>
+      <td>${bpW} kg</td>
+      <td>${sqW} kg</td>
+    </tr>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table class="rm-rep-table">
+        <thead>
+          <tr>
+            <th>rep</th>
+            <th>ベンチプレス</th>
+            <th>スクワット / DL</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 // ===== CSV =====
