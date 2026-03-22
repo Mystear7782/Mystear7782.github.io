@@ -127,16 +127,29 @@ class TestCsvImport:
             os.unlink(csv_path)
 
     def test_08_07_duplicate_session_shows_skip_count(self, page: Page):
-        """TC-08-07: 重複セッションのCSVをインポートするとスキップ件数が表示される"""
-        rows = ['"プルアップ",背中,自重運動,2026-03-15,sess_dup_001,1,60,10,75.0,600']
-        csv_path = self._create_strength_csv(rows)
+        """TC-08-07: 重複セッションのCSVをインポートするとスキップ件数が表示される
+        筋トレはセット単位でINSERTし続ける仕様のため、
+        セッション単位でスキップされる有酸素CSVで重複テストを行う"""
+        header = "menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh\n"
+        row    = '"ランニング",有酸素運動,2026-03-15,sess_dup_cardio_001,30,5.0,300,140,,\n'
+        content = header + row
+
+        import tempfile, os
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8-sig"
+        )
+        tmp.write(content)
+        tmp.close()
+        csv_path = tmp.name
 
         try:
             self._go_to_csv_page(page)
             # 1回目インポート
             page.locator("input[type='file']").set_input_files(csv_path)
             page.wait_for_timeout(1000)
-            # 2回目（同じファイル → 重複）
+            expect(page.locator("#import-result")).to_contain_text("インポートしました")
+
+            # 2回目（同じsession_id → スキップ）
             page.locator("input[type='file']").set_input_files(csv_path)
             page.wait_for_timeout(1000)
 
