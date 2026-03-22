@@ -538,6 +538,7 @@ const S = {
   menus:    JSON.parse(localStorage.getItem('gl_menus')    || '[]'),
   sessions: JSON.parse(localStorage.getItem('gl_sessions') || '{}'),
   menu: null, sessionId: null, editingSetIdx: null, showArchived: false,
+  fromCalendar: false, // カレンダーから遷移したかどうか
 };
 
 // 旧形式(gl_history)からの自動マイグレーション
@@ -833,6 +834,7 @@ function openSetEdit(sid){
     S.sessionId=newId;
   }
   S.editingSetIdx=null;
+  S.fromCalendar=false;
   document.getElementById('set-back').onclick=()=>go('menu-detail');
   go('set-edit');
 }
@@ -982,7 +984,8 @@ function saveCardioFinal(){
   if(c.hr==null)    missing.push('平均心拍数');
   if(missing.length){ toast(`未入力項目: ${missing.join('・')}`); return; }
   toast('記録を保存しました');
-  go('menu-detail');
+  // F-04: カレンダー経由の場合は画面を移動しない（set-editにとどまる）
+  if(!S.fromCalendar) go('menu-detail');
 }
 
 function renderCardioPreview(){
@@ -1249,10 +1252,12 @@ function renderCalDetail(dateStr) {
 
 // F-02: カレンダーから該当セッションへ直接遷移
 // F-03: 戻るボタンをanalysisに設定
+// F-04: 保存後もset-editにとどまる
 function goToSessionFromCalendar(menuId, sessId) {
   S.menu = S.menus.find(m=>m.id===menuId);
   S.sessionId = sessId;
   S.editingSetIdx = null;
+  S.fromCalendar = true;
   document.getElementById('set-back').onclick = () => go('analysis');
   go('set-edit');
 }
