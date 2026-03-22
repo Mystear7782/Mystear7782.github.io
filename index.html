@@ -1232,7 +1232,7 @@ function renderCalDetail(dateStr) {
       ${fmtDate(dateStr)}の記録
     </div>
     ${sessions.map(s => `
-    <div class="cal-sess-row" onclick="goToMenuDetail('${s.menu.id}')">
+    <div class="cal-sess-row" onclick="goToSessionFromCalendar('${s.menu.id}','${s.sessId}')">
       <div class="cal-sess-name">${s.menu.name}</div>
       <div class="cal-sess-stats">
         ${s.type==='strength' ? `
@@ -1242,10 +1242,19 @@ function renderCalDetail(dateStr) {
         ` : `
           <div class="cal-sess-stat">有酸素<span>${s.summary||'—'}</span></div>
         `}
-        <div class="cal-sess-stat" style="color:var(--accent);font-size:11px">詳細 →</div>
       </div>
     </div>`).join('')}
   </div>`;
+}
+
+// F-02: カレンダーから該当セッションへ直接遷移
+// F-03: 戻るボタンをanalysisに設定
+function goToSessionFromCalendar(menuId, sessId) {
+  S.menu = S.menus.find(m=>m.id===menuId);
+  S.sessionId = sessId;
+  S.editingSetIdx = null;
+  document.getElementById('set-back').onclick = () => go('analysis');
+  go('set-edit');
 }
 
 function goToMenuDetail(menuId) {
