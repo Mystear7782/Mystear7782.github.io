@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GymLog">
+<meta name="apple-mobile-web-app-title" content="Workout tracker">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<title>GymLog</title>
+<title>Workout tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -355,7 +356,7 @@ input,select{font-family:var(--font)}
 <div id="overlay" onclick="closeSidebar()"></div>
 <div id="sidebar">
   <div class="sb-head">
-    <div class="sb-logo">Gym<span>Log</span></div>
+    <div class="sb-logo">Workout<span>tracker</span></div>
     <div class="sb-tagline">WORKOUT TRACKER</div>
   </div>
   <nav class="sb-nav">
@@ -807,7 +808,12 @@ function renderList() {
           </div>
         </div>
         <div class="menu-row-right">
-          ${st.maxOrm>0?`<div class="row-1rm">${st.maxOrm}<span class="row-1rm-unit"> kg</span></div><div class="row-1rm-label">最大1RM</div>`:'<div style="font-size:12px;color:var(--text3)">未記録</div>'}
+          ${isCardioMenu(m)
+            ? ''
+            : st.maxOrm>0
+              ? `<div class="row-1rm">${st.maxOrm}<span class="row-1rm-unit"> kg</span></div><div class="row-1rm-label">最大1RM</div>`
+              : '<div style="font-size:12px;color:var(--text3)">未記録</div>'
+          }
         </div>
         <span class="row-chevron">›</span>
       </div>`;
@@ -866,7 +872,7 @@ function renderDetail(){
       <div class="detail-name">${m.name}</div>
       <div class="detail-tags">
         <span class="tag ${tagClass(m.type)}">${m.type}</span>
-        <span class="tag" style="background:var(--bg3);color:var(--text3)">${m.category}</span>
+        ${m.type !== m.category ? `<span class="tag" style="background:var(--bg3);color:var(--text3)">${m.category}</span>` : ''}
         ${m.archived?'<span class="tag tag-archived">アーカイブ済</span>':''}
       </div>
       <div class="stats-grid">
