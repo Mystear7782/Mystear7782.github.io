@@ -274,6 +274,54 @@ input,select{font-family:var(--font)}
 .import-file-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--accent);border-radius:var(--r-sm);color:#fff;font-size:15px;font-weight:700;transition:all .18s;box-shadow:var(--shadow-xs);cursor:pointer;border:none;font-family:var(--font)}
 .import-file-btn:hover{opacity:.9;transform:translateY(-1px)}
 
+/* ANALYSIS PAGE */
+.ana-tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--bg3);padding:4px;border-radius:var(--r-sm)}
+.ana-tab{flex:1;padding:9px;border-radius:var(--r-xs);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;color:var(--text3);background:none;border:none;font-family:var(--font)}
+.ana-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-xs)}
+
+/* Calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-title{font-size:16px;font-weight:700;color:var(--text)}
+.cal-nav-btn{width:36px;height:36px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;color:var(--text2)}
+.cal-nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cal-grid{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-sm)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
+.cal-dow-cell{padding:8px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-cell{min-height:44px;padding:6px 4px;text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border);position:relative;transition:background .15s}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell.empty{background:var(--bg3)}
+.cal-cell.has-record{background:var(--accent-bg);cursor:pointer}
+.cal-cell.has-record:hover{background:var(--accent);color:#fff}
+.cal-cell.has-record:hover .cal-day-num{color:#fff}
+.cal-cell.today .cal-day-num{background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center}
+.cal-day-num{font-size:13px;font-weight:500;color:var(--text2)}
+.cal-cell.has-record .cal-day-num{color:var(--accent-t);font-weight:700}
+.cal-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;margin:2px auto 0}
+.cal-cell.has-record:hover .cal-dot{background:#fff}
+
+/* Calendar day detail */
+.cal-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:14px;box-shadow:var(--shadow-sm)}
+.cal-detail-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.cal-sess-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .18s}
+.cal-sess-row:hover{border-color:var(--accent);background:var(--accent-bg)}
+.cal-sess-name{font-size:14px;font-weight:600;color:var(--text)}
+.cal-sess-stats{display:flex;gap:14px;margin-top:5px;flex-wrap:wrap}
+.cal-sess-stat{font-size:11px;color:var(--text3)}
+.cal-sess-stat span{font-weight:700;color:var(--text2);margin-left:2px}
+
+/* Analysis menu list */
+.ana-menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;margin-bottom:8px;box-shadow:var(--shadow-xs)}
+.ana-menu-row:hover{border-color:var(--accent);transform:translateX(2px);box-shadow:var(--shadow-sm)}
+.ana-menu-name{font-size:15px;font-weight:600;color:var(--text)}
+.ana-menu-meta{font-size:12px;color:var(--text3);margin-top:3px}
+
+/* Analysis detail */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-size:14px;font-weight:700;color:var(--text)}
+.chart-wrap{position:relative;height:200px}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -298,9 +346,8 @@ input,select{font-family:var(--font)}
       <span class="sb-icon">≡</span>メニュー一覧
     </div>
     <div class="sb-sec">分析・データ</div>
-    <div class="sb-item disabled">
+    <div class="sb-item" data-page="analysis" onclick="go('analysis')">
       <span class="sb-icon">📊</span>メニュー分析
-      <span class="sb-badge">近日公開</span>
     </div>
     <div class="sb-item" data-page="csv" onclick="go('csv')">
       <span class="sb-icon">📥</span>CSV出力 / 入力
@@ -384,6 +431,29 @@ input,select{font-family:var(--font)}
         詳細に戻る
       </button>
       <div id="set-edit-body"></div>
+    </div>
+
+    <!-- ANALYSIS -->
+    <div class="page" id="page-analysis">
+      <div class="sec-head">
+        <div class="sec-title">メニュー分析</div>
+        <div class="sec-sub">トレーニングの記録を可視化します</div>
+      </div>
+      <div class="ana-tabs">
+        <button class="ana-tab active" id="ana-tab-cal" onclick="switchAnaTab('cal')">カレンダー</button>
+        <button class="ana-tab" id="ana-tab-menu" onclick="switchAnaTab('menu')">メニュー</button>
+      </div>
+      <div id="ana-cal-view"></div>
+      <div id="ana-menu-view" style="display:none"></div>
+    </div>
+
+    <!-- ANALYSIS DETAIL -->
+    <div class="page" id="page-analysis-detail">
+      <button class="back-btn" onclick="go('analysis')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
+        分析に戻る
+      </button>
+      <div id="analysis-detail-body"></div>
     </div>
 
     <!-- CSV -->
@@ -557,7 +627,7 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録','csv':'CSV出力 / 入力'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -567,6 +637,8 @@ function go(page) {
   if(page==='menu-list')   renderList();
   if(page==='menu-detail') renderDetail();
   if(page==='set-edit')    renderSetEdit();
+  if(page==='analysis')    renderAnalysis();
+  if(page==='analysis-detail') renderAnalysisDetail();
 }
 
 // ===== ADD MENU =====
@@ -1034,6 +1106,311 @@ function renderSets(){
       <button class="btn-del" onclick="event.stopPropagation();deleteSet(${i})">✕</button>
     </div>`;
   }).join('');
+}
+
+// ===== ANALYSIS =====
+let anaState = {
+  tab: 'cal',
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  calSelectedDate: null,
+  analysisMenuId: null,
+  volChart: null,
+  ormChart: null,
+};
+
+function renderAnalysis() {
+  switchAnaTab(anaState.tab);
+}
+
+function switchAnaTab(tab) {
+  anaState.tab = tab;
+  document.getElementById('ana-tab-cal').classList.toggle('active', tab==='cal');
+  document.getElementById('ana-tab-menu').classList.toggle('active', tab==='menu');
+  document.getElementById('ana-cal-view').style.display  = tab==='cal'  ? 'block' : 'none';
+  document.getElementById('ana-menu-view').style.display = tab==='menu' ? 'block' : 'none';
+  if (tab==='cal')  renderCalendar();
+  if (tab==='menu') renderAnaMenuList();
+}
+
+// ===== CALENDAR =====
+function renderCalendar() {
+  const y = anaState.calYear, m = anaState.calMonth;
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  // 記録がある日付セットを構築
+  const recordDates = new Set();
+  for (const menu of S.menus) {
+    for (const sess of Object.values(S.sessions[menu.id]||{})) {
+      if (sess.date && sess.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)) {
+        recordDates.add(sess.date);
+      }
+    }
+  }
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const todayStr = today();
+
+  let cells = '';
+  for (let i=0; i<firstDay; i++) cells += `<div class="cal-cell empty"></div>`;
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasRec = recordDates.has(dateStr);
+    const isToday = dateStr === todayStr;
+    const isSel = dateStr === anaState.calSelectedDate;
+    cells += `<div class="cal-cell${hasRec?' has-record':''}${isToday?' today':''}${isSel?' has-record':''}"
+      ${hasRec ? `onclick="selectCalDate('${dateStr}')"` : ''}>
+      <div class="cal-day-num">${d}</div>
+      ${hasRec ? '<div class="cal-dot"></div>' : ''}
+    </div>`;
+  }
+
+  const DOW = ['日','月','火','水','木','金','土'];
+  document.getElementById('ana-cal-view').innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="moveMonth(-1)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 3L5 8l5 5"/></svg>
+      </button>
+      <div class="cal-title">${y}年 ${monthNames[m]}</div>
+      <button class="cal-nav-btn" onclick="moveMonth(1)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dow">${DOW.map(d=>`<div class="cal-dow-cell">${d}</div>`).join('')}</div>
+      <div class="cal-days">${cells}</div>
+    </div>
+    <div id="cal-detail-area">${anaState.calSelectedDate ? '' : ''}</div>`;
+
+  if (anaState.calSelectedDate) renderCalDetail(anaState.calSelectedDate);
+}
+
+function moveMonth(dir) {
+  anaState.calMonth += dir;
+  if (anaState.calMonth < 0)  { anaState.calMonth=11; anaState.calYear--; }
+  if (anaState.calMonth > 11) { anaState.calMonth=0;  anaState.calYear++; }
+  anaState.calSelectedDate = null;
+  renderCalendar();
+}
+
+function selectCalDate(dateStr) {
+  anaState.calSelectedDate = anaState.calSelectedDate === dateStr ? null : dateStr;
+  renderCalendar();
+}
+
+function renderCalDetail(dateStr) {
+  const el = document.getElementById('cal-detail-area');
+  if (!el) return;
+
+  // その日のセッションを全メニューから収集
+  const sessions = [];
+  for (const menu of S.menus) {
+    for (const [sessId, sess] of Object.entries(S.sessions[menu.id]||{})) {
+      if (sess.date !== dateStr) continue;
+      if (isCardioMenu(menu)) {
+        const c = sess.cardio||{};
+        sessions.push({ menu, sessId, type:'cardio',
+          summary: `${c.time!=null?c.time+'分 ':''} ${c.dist!=null?c.dist+'km ':''} ${c.cal!=null?c.cal+'kcal':''}`.trim()
+        });
+      } else {
+        const sets = sess.sets||[];
+        let maxOrm=0, vol=0;
+        sets.forEach(s=>{ const o=orm(s.w,s.r); if(o>maxOrm) maxOrm=o; vol+=s.w*s.r; });
+        sessions.push({ menu, sessId, type:'strength',
+          sets: sets.length, maxOrm: maxOrm.toFixed(1), vol: vol.toFixed(0)
+        });
+      }
+    }
+  }
+
+  if (!sessions.length) { el.innerHTML=''; return; }
+
+  el.innerHTML = `<div class="cal-detail">
+    <div class="cal-detail-title">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M5 1v4M11 1v4M2 7h12"/></svg>
+      ${fmtDate(dateStr)}の記録
+    </div>
+    ${sessions.map(s => `
+    <div class="cal-sess-row" onclick="goToMenuDetail('${s.menu.id}')">
+      <div class="cal-sess-name">${s.menu.name}</div>
+      <div class="cal-sess-stats">
+        ${s.type==='strength' ? `
+          <div class="cal-sess-stat">セット数<span>${s.sets}</span></div>
+          <div class="cal-sess-stat">最大1RM<span>${s.maxOrm} kg</span></div>
+          <div class="cal-sess-stat">ボリューム<span>${s.vol} kg</span></div>
+        ` : `
+          <div class="cal-sess-stat">有酸素<span>${s.summary||'—'}</span></div>
+        `}
+        <div class="cal-sess-stat" style="color:var(--accent);font-size:11px">詳細 →</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function goToMenuDetail(menuId) {
+  S.menu = S.menus.find(m=>m.id===menuId);
+  go('menu-detail');
+}
+
+// ===== ANALYSIS MENU VIEW =====
+const ANA_CATS = ['胸','背中','肩','足','腕'];
+function renderAnaMenuList() {
+  const el = document.getElementById('ana-menu-view');
+  const menus = S.menus.filter(m => m.category !== '有酸素運動');
+  if (!menus.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">分析できるメニューがありません</div><div class="empty-desc">メニューを追加して記録を付けると分析できます</div></div>`;
+    return;
+  }
+  let html = '';
+  for (const cat of ANA_CATS) {
+    const items = menus.filter(m=>m.category===cat);
+    if (!items.length) continue;
+    html += `<div class="group-block"><div class="group-head"><div class="group-dot" style="background:${dotColor(cat)}"></div><div class="group-name">${cat}</div><div class="group-cnt">${items.length}件</div></div>`;
+    for (const m of items) {
+      const sessCount = Object.keys(S.sessions[m.id]||{}).length;
+      const st = menuStats(m.id);
+      html += `<div class="ana-menu-row" onclick="openAnalysisDetail('${m.id}')">
+        <div style="flex:1">
+          <div class="ana-menu-name">${m.name}</div>
+          <div class="ana-menu-meta">${sessCount}セッション${st.maxOrm>0?' · 最大1RM '+st.maxOrm+' kg':''}</div>
+        </div>
+        <span style="color:var(--text3);font-size:16px">›</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function openAnalysisDetail(menuId) {
+  anaState.analysisMenuId = menuId;
+  go('analysis-detail');
+}
+
+// ===== ANALYSIS DETAIL =====
+function renderAnalysisDetail() {
+  const m = S.menus.find(x=>x.id===anaState.analysisMenuId);
+  if (!m) return;
+
+  const sessMap = S.sessions[m.id]||{};
+  const sessList = Object.entries(sessMap)
+    .map(([id,s])=>({id,...s}))
+    .filter(s=>s.sets&&s.sets.length>0)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const labels = sessList.map(s=>fmtDate(s.date).replace(/\d{4}年/,''));
+  const volData = sessList.map(s=>{
+    let v=0; (s.sets||[]).forEach(x=>v+=x.w*x.r); return +v.toFixed(0);
+  });
+  const ormData = sessList.map(s=>{
+    let mx=0; (s.sets||[]).forEach(x=>{ const o=orm(x.w,x.r); if(o>mx) mx=o; }); return +mx.toFixed(1);
+  });
+
+  document.getElementById('analysis-detail-body').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px">${m.name}</div>
+      <div style="display:flex;gap:6px">
+        <span class="tag ${tagClass(m.type)}">${m.type}</span>
+        <span class="tag" style="background:var(--bg3);color:var(--text3)">${m.category}</span>
+      </div>
+    </div>
+
+    ${sessList.length === 0 ? `
+    <div class="empty-state" style="padding:32px 16px">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">記録がありません</div>
+      <div class="empty-desc">セットを記録するとグラフが表示されます</div>
+    </div>` : `
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">ボリューム推移 (kg)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-vol"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">最大1RM推移 (kg)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-orm"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap">
+        <table class="hist-table">
+          <thead><tr><th>日付</th><th>ボリューム</th><th>最大1RM</th></tr></thead>
+          <tbody>${sessList.map((s,i)=>`
+            <tr>
+              <td class="td-date">${fmtDate(s.date)}</td>
+              <td class="td-vol">${volData[i]} kg</td>
+              <td class="td-1rm">${ormData[i]} kg</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`}`;
+
+  if (sessList.length > 0) {
+    waitForChartJs(() => {
+      drawChart('vol', labels, volData);
+      drawChart('orm', labels, ormData);
+    });
+  }
+}
+
+function waitForChartJs(cb) {
+  if (window.Chart) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function drawChart(key, labels, data) {
+  const canvasId = key==='vol' ? 'chart-vol' : 'chart-orm';
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  if (key==='vol' && anaState.volChart) { anaState.volChart.destroy(); anaState.volChart=null; }
+  if (key==='orm' && anaState.ormChart) { anaState.ormChart.destroy(); anaState.ormChart=null; }
+
+  const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const accentColor = isDark ? '#38bdf8' : '#0ea5e9';
+  const gridColor   = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const tickColor   = isDark ? '#6b7280' : '#9ca3af';
+
+  const chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets:[{
+        label: key==='vol' ? 'ボリューム (kg)' : '最大1RM (kg)',
+        data,
+        borderColor: accentColor,
+        backgroundColor: isDark ? 'rgba(56,189,248,.1)' : 'rgba(14,165,233,.08)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => ` ${ctx.parsed.y} kg`
+      }}},
+      scales:{
+        x:{ grid:{ color:gridColor }, ticks:{ color:tickColor, font:{size:11}, maxRotation:45 }},
+        y:{ grid:{ color:gridColor }, ticks:{ color:tickColor, font:{size:11} }, beginAtZero:false }
+      }
+    }
+  });
+
+  if (key==='vol') anaState.volChart=chart;
+  if (key==='orm') anaState.ormChart=chart;
 }
 
 // ===== CSV =====
