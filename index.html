@@ -1557,8 +1557,11 @@ function rmSQ(w, r) { return w * r / 33.3 + w; }
 // 逆算: Nrepで扱える重量 = 1RM ÷ (r ÷ divisor + 1)
 function rmWeightFromMax(max, r, divisor) { return max / (r / divisor + 1); }
 
-// 小数点1桁に丸め
-function rmRound(n) { return Math.round(n * 10) / 10; }
+// 小数部 >= 0.5 → 切り上げ、< 0.5 → 切り捨て（参考表と同一ロジック）
+function rmRound(n) {
+  const dec = n - Math.floor(n);
+  return dec >= 0.5 ? Math.ceil(n) : Math.floor(n);
+}
 
 // 推定1RM計算（入力ごとに呼ばれる）
 function calcRM() {
