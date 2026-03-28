@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__03129205-a894-4989-bda1-5312c62f0f30__getAccessibleAtlassianResources",
+      "mcp__03129205-a894-4989-bda1-5312c62f0f30__searchJiraIssuesUsingJql"
+    ]
+  }
+}

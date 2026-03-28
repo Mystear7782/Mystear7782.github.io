@@ -344,6 +344,16 @@ input,select{font-family:var(--font)}
 .rm-rep-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text3)}
 .rm-rep-table tr.rm-highlight .rm-rep-badge{background:var(--accent);border-color:var(--accent);color:#fff}
 
+/* EDIT MENU MODAL */
+#edit-menu-modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 16px;align-items:flex-start;justify-content:center}
+#edit-menu-modal.show{display:flex}
+.modal-box{background:var(--surface);border-radius:var(--r);padding:20px;width:100%;max-width:420px;margin:auto;box-shadow:var(--shadow)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text)}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.btn-modal-save{flex:1;padding:12px;background:var(--accent);color:#fff;border-radius:var(--r-sm);font-size:14px;font-weight:600;border:none;cursor:pointer}
+.btn-modal-cancel{padding:12px 16px;background:var(--bg3);color:var(--text2);border-radius:var(--r-sm);font-size:14px;font-weight:500;border:none;cursor:pointer}
+.btn-action.edit-menu{border-color:var(--accent);color:var(--accent-t);background:var(--accent-bg)}
+
 /* TOAST */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -361,10 +371,10 @@ input,select{font-family:var(--font)}
   </div>
   <nav class="sb-nav">
     <div class="sb-sec">メニュー管理</div>
-    <div class="sb-item active" data-page="add-menu" onclick="go('add-menu')">
+    <div class="sb-item" data-page="add-menu" onclick="go('add-menu')">
       <span class="sb-icon">＋</span>メニューの追加
     </div>
-    <div class="sb-item" data-page="menu-list" onclick="go('menu-list')">
+    <div class="sb-item active" data-page="menu-list" onclick="go('menu-list')">
       <span class="sb-icon">≡</span>メニュー一覧
     </div>
     <div class="sb-sec">分析・データ</div>
@@ -383,12 +393,12 @@ input,select{font-family:var(--font)}
 <div id="app">
   <div id="header">
     <button id="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
-    <div id="page-title">メニューの追加</div>
+    <div id="page-title">メニュー一覧</div>
   </div>
   <div id="content">
 
     <!-- ADD MENU -->
-    <div class="page active" id="page-add-menu">
+    <div class="page" id="page-add-menu">
       <div class="sec-head">
         <div class="sec-title">メニューの追加</div>
         <div class="sec-sub">部位・種別・メニュー名を入力してください</div>
@@ -426,7 +436,7 @@ input,select{font-family:var(--font)}
     </div>
 
     <!-- MENU LIST -->
-    <div class="page" id="page-menu-list">
+    <div class="page active" id="page-menu-list">
       <div class="sec-head">
         <div class="sec-title">メニュー一覧</div>
         <div class="sec-sub">部位ごとに登録したメニューが表示されます</div>
@@ -617,6 +627,46 @@ input,select{font-family:var(--font)}
   </div>
 </div>
 <div id="toast"></div>
+
+<!-- EDIT MENU MODAL -->
+<div id="edit-menu-modal" onclick="if(event.target===this)closeEditMenu()">
+  <div class="modal-box">
+    <div class="modal-title">メニューを編集</div>
+    <div class="card-label">部位</div>
+    <div class="form-group">
+      <div class="sel-wrap">
+        <select class="form-select" id="edit-sel-cat" onchange="onEditCatChange()">
+          <option value="胸">胸</option>
+          <option value="背中">背中</option>
+          <option value="肩">肩</option>
+          <option value="足">足</option>
+          <option value="腕">腕</option>
+          <option value="有酸素運動">有酸素運動</option>
+        </select>
+      </div>
+    </div>
+    <div id="edit-type-section">
+      <div class="card-label">種別</div>
+      <div class="form-group">
+        <div class="type-chips">
+          <div class="type-chip" data-type="マシン" onclick="selEditType(this)">🔧 マシン</div>
+          <div class="type-chip" data-type="フリーウェイト" onclick="selEditType(this)">🏋️ フリーウェイト</div>
+          <div class="type-chip" data-type="自重運動" onclick="selEditType(this)">💪 自重運動</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">メニュー名</div>
+    <div class="form-group">
+      <input type="text" class="form-input" id="edit-inp-name"
+        placeholder="例：ベンチプレス（全角30文字まで）"
+        oninput="onNameInput(this)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeEditMenu()">キャンセル</button>
+      <button class="btn-modal-save" onclick="saveEditMenu()">保存する</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===== STATE =====
@@ -845,6 +895,7 @@ function renderDetail(){
         <td>${c.dist!=null?c.dist+' km':'—'}</td>
         <td class="td-vol">${c.cal!=null?c.cal+' kcal':'—'}</td>
         <td class="td-1rm">${c.hr!=null?c.hr+' bpm':'—'}</td>
+        <td><button class="btn-del" style="font-size:11px;padding:4px 7px" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button></td>
       </tr>`;
     }
   } else {
@@ -859,6 +910,7 @@ function renderDetail(){
         <td>${mxW>0?mxW+' kg':'—'}</td>
         <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
         <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
+        <td><button class="btn-del" style="font-size:11px;padding:4px 7px" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button></td>
       </tr>`;
     }
   }
@@ -889,6 +941,7 @@ function renderDetail(){
     </div>
     <div class="menu-actions">
       ${!m.archived?`<button class="btn-action new-sess" onclick="openSetEdit(null)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>新規セッション</button>`:''}
+      <button class="btn-action edit-menu" onclick="openEditMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg>編集</button>
       ${archBtn}
       <button class="btn-action" style="border-color:var(--green);color:var(--green-t);background:var(--green-bg)" onclick="exportMenuCSV('${m.id}')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M8 3v8M5 8l3 3 3-3"/><path d="M3 13h10"/></svg>CSV出力</button>
       <button class="btn-action delete" onclick="deleteMenu()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V3h4v1M5 4l.5 9h5l.5-9"/></svg>完全削除</button>
@@ -897,7 +950,7 @@ function renderDetail(){
     <div class="card" style="padding:0;overflow:hidden">
       <div class="table-wrap">
         <table class="hist-table">
-          <thead><tr>${isCardioMenu(m)?'<th>日付</th><th>時間</th><th>距離</th><th>消費Cal</th><th>平均心拍</th>':'<th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th>'}</tr></thead>
+          <thead><tr>${isCardioMenu(m)?'<th>日付</th><th>時間</th><th>距離</th><th>消費Cal</th><th>平均心拍</th><th></th>':'<th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th><th></th>'}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -922,6 +975,65 @@ function deleteMenu(){
   S.menus=S.menus.filter(m=>m.id!==S.menu.id);
   delete S.sessions[S.menu.id];
   persist(); toast('削除しました'); S.menu=null; go('menu-list');
+}
+
+// ===== EDIT MENU =====
+let editMenuTypeVal = null;
+function openEditMenu() {
+  const m = S.menu;
+  document.getElementById('edit-inp-name').value = m.name;
+  document.getElementById('edit-sel-cat').value = m.category;
+  const isCardio = m.category === '有酸素運動';
+  document.getElementById('edit-type-section').style.display = isCardio ? 'none' : 'block';
+  editMenuTypeVal = m.type;
+  document.querySelectorAll('#edit-type-section .type-chip').forEach(c => {
+    c.classList.toggle('sel', c.dataset.type === m.type);
+  });
+  document.getElementById('edit-menu-modal').classList.add('show');
+}
+function onEditCatChange() {
+  const cat = document.getElementById('edit-sel-cat').value;
+  const isCardio = cat === '有酸素運動';
+  document.getElementById('edit-type-section').style.display = isCardio ? 'none' : 'block';
+  if(isCardio) {
+    editMenuTypeVal = '有酸素運動';
+  } else if(editMenuTypeVal === '有酸素運動') {
+    editMenuTypeVal = null;
+    document.querySelectorAll('#edit-type-section .type-chip').forEach(c=>c.classList.remove('sel'));
+  }
+}
+function selEditType(el) {
+  document.querySelectorAll('#edit-type-section .type-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  editMenuTypeVal = el.dataset.type;
+}
+function saveEditMenu() {
+  const name = document.getElementById('edit-inp-name').value.trim();
+  const cat = document.getElementById('edit-sel-cat').value;
+  if(!name) { toast('メニュー名を入力してください'); return; }
+  if(!editMenuTypeVal) { toast('種別を選択してください'); return; }
+  if(S.menus.find(m=>m.id!==S.menu.id&&m.name===name&&m.category===cat&&!m.archived)) {
+    toast('同じ部位に同名のメニューがあります'); return;
+  }
+  S.menu.name = name;
+  S.menu.category = cat;
+  S.menu.type = editMenuTypeVal;
+  persist();
+  closeEditMenu();
+  toast(`「${name}」を更新しました`);
+  renderDetail();
+}
+function closeEditMenu() {
+  document.getElementById('edit-menu-modal').classList.remove('show');
+}
+
+// ===== DELETE SESSION =====
+function deleteSession(sessId) {
+  if(!confirm('このセッションを削除しますか？\n⚠️ この操作は取り消せません。')) return;
+  delete S.sessions[S.menu.id][sessId];
+  persist();
+  toast('セッションを削除しました');
+  renderDetail();
 }
 
 // ===== SET EDIT =====
@@ -1030,13 +1142,15 @@ function renderSetEdit(){
     return;
   }
 
-  // 筋トレ（既存）
+  // 筋トレ
+  const isBodyweight = S.menu.type === '自重運動';
   document.getElementById('set-edit-body').innerHTML=`
     <div class="set-session-bar">📋 <strong>${S.menu.name}</strong>${sess.time&&sess.time!=='00:00'?` <span style="font-size:11px;color:var(--nav-text)">· ${sess.time}</span>`:''}</div>
     ${dateRow}
     <div class="card">
       <div class="card-label" id="form-label">セットを追加</div>
       <div class="set-input-grid">
+        ${!isBodyweight?`
         <div class="input-box">
           <label>重量</label>
           <div class="big-wrap">
@@ -1044,7 +1158,7 @@ function renderSetEdit(){
               inputmode="decimal" min="0" step="0.5" oninput="updatePreview()">
             <span class="big-unit">kg</span>
           </div>
-        </div>
+        </div>`:''}
         <div class="input-box">
           <label>回数</label>
           <div class="big-wrap">
@@ -1054,7 +1168,7 @@ function renderSetEdit(){
           </div>
         </div>
       </div>
-      <div class="orm-preview" id="orm-prev">重量と回数を入力すると 1RM を表示します</div>
+      <div class="orm-preview" id="orm-prev">${isBodyweight?'回数を入力してください':'重量と回数を入力すると 1RM を表示します'}</div>
       <button class="btn-primary" id="btn-add-set" onclick="commitSet()" disabled>セットを追加</button>
     </div>
     <div class="card-label" id="set-count-label" style="padding:0 2px;margin-bottom:8px">記録済みセット</div>
@@ -1130,18 +1244,27 @@ function updateSessionDateTime(){
 }
 
 function updatePreview(){
-  const w=parseFloat(document.getElementById('inp-w').value);
-  const r=parseInt(document.getElementById('inp-r').value);
-  const prev=document.getElementById('orm-prev');
-  const btn=document.getElementById('btn-add-set');
-  if(w>0&&r>0){prev.textContent=`推定1RM：${orm(w,r)} kg（${w}kg × ${r}回）`;btn.disabled=false;}
-  else{prev.textContent='重量と回数を入力すると 1RM を表示します';btn.disabled=true;}
+  const isBodyweight = S.menu && S.menu.type === '自重運動';
+  const wEl = document.getElementById('inp-w');
+  const w = isBodyweight ? 0 : parseFloat(wEl ? wEl.value : '');
+  const r = parseInt(document.getElementById('inp-r').value);
+  const prev = document.getElementById('orm-prev');
+  const btn = document.getElementById('btn-add-set');
+  if(isBodyweight){
+    if(r>0){ prev.textContent=`${r}回`; btn.disabled=false; }
+    else{ prev.textContent='回数を入力してください'; btn.disabled=true; }
+  } else {
+    if(w>0&&r>0){ prev.textContent=`推定1RM：${orm(w,r)} kg（${w}kg × ${r}回）`; btn.disabled=false; }
+    else{ prev.textContent='重量と回数を入力すると 1RM を表示します'; btn.disabled=true; }
+  }
 }
 
 function commitSet(){
-  const w=parseFloat(document.getElementById('inp-w').value);
-  const r=parseInt(document.getElementById('inp-r').value);
-  if(!w||!r) return;
+  const isBodyweight = S.menu && S.menu.type === '自重運動';
+  const wEl = document.getElementById('inp-w');
+  const w = isBodyweight ? 0 : parseFloat(wEl ? wEl.value : '');
+  const r = parseInt(document.getElementById('inp-r').value);
+  if(isBodyweight ? !r : (!w||!r)) return;
   const sets=S.sessions[S.menu.id][S.sessionId].sets;
   if(S.editingSetIdx!==null){
     sets[S.editingSetIdx]={w,r};
@@ -1154,35 +1277,39 @@ function commitSet(){
     toast('セットを追加しました');
   }
   persist();
-  document.getElementById('inp-w').value='';
+  if(wEl) wEl.value='';
   document.getElementById('inp-r').value='';
-  document.getElementById('orm-prev').textContent='重量と回数を入力すると 1RM を表示します';
+  document.getElementById('orm-prev').textContent=isBodyweight?'回数を入力してください':'重量と回数を入力すると 1RM を表示します';
   document.getElementById('btn-add-set').disabled=true;
   updateSetCountLabel(); renderSets();
 }
 
 function editSet(idx){
+  const isBodyweight = S.menu && S.menu.type === '自重運動';
   const s=S.sessions[S.menu.id][S.sessionId].sets[idx];
   S.editingSetIdx=idx;
-  document.getElementById('inp-w').value=s.w;
+  const wEl = document.getElementById('inp-w');
+  if(wEl) wEl.value=s.w;
   document.getElementById('inp-r').value=s.r;
   document.getElementById('form-label').textContent=`セット${idx+1}を編集中`;
   document.getElementById('btn-add-set').textContent='変更を保存';
   document.getElementById('btn-add-set').disabled=false;
   updatePreview();
-  document.getElementById('inp-w').focus();
+  if(wEl) wEl.focus(); else document.getElementById('inp-r').focus();
   document.getElementById('content').scrollTo({top:0,behavior:'smooth'});
   renderSets();
 }
 
 function cancelEdit(){
+  const isBodyweight = S.menu && S.menu.type === '自重運動';
   S.editingSetIdx=null;
-  document.getElementById('inp-w').value='';
+  const wEl = document.getElementById('inp-w');
+  if(wEl) wEl.value='';
   document.getElementById('inp-r').value='';
   document.getElementById('form-label').textContent='セットを追加';
   document.getElementById('btn-add-set').textContent='セットを追加';
   document.getElementById('btn-add-set').disabled=true;
-  document.getElementById('orm-prev').textContent='重量と回数を入力すると 1RM を表示します';
+  document.getElementById('orm-prev').textContent=isBodyweight?'回数を入力してください':'重量と回数を入力すると 1RM を表示します';
   renderSets();
 }
 
@@ -1208,13 +1335,16 @@ function renderSets(){
     el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだセットが追加されていません</div>`;
     return;
   }
+  const isBodyweight = S.menu && S.menu.type === '自重運動';
   el.innerHTML=sets.map((s,i)=>{
     const isEditing=S.editingSetIdx===i;
+    const mainText = isBodyweight ? `${s.r} 回` : `${s.w} kg × ${s.r} 回`;
+    const subText = isBodyweight ? '' : `<div class="set-sub">1RM：${orm(s.w,s.r)} kg</div>`;
     return `<div class="set-row${isEditing?' editing':''}" onclick="editSet(${i})">
       <div class="set-num">${i+1}</div>
       <div class="set-info">
-        <div class="set-main">${s.w} kg × ${s.r} 回</div>
-        <div class="set-sub">1RM：${orm(s.w,s.r)} kg</div>
+        <div class="set-main">${mainText}</div>
+        ${subText}
         <div class="set-edit-hint">${isEditing?'✏️ 編集中 — 上のフォームで変更できます':'タップして編集'}</div>
       </div>
       <button class="btn-del" onclick="event.stopPropagation();deleteSet(${i})">✕</button>
@@ -1834,6 +1964,9 @@ function showImportResult(type, msg) {
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
+
+// 初期表示：メニュー一覧
+renderList();
 </script>
 </body>
 </html>
