@@ -899,19 +899,29 @@ function renderDetail(){
       </tr>`;
     }
   } else {
+    const isBodyweight = m.type === '自重運動';
     for(const sess of sessList){
-      let mxO=0,vol=0,mxW=0;
-      (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;});
+      let mxO=0,vol=0,mxW=0,totalReps=0;
+      (sess.sets||[]).forEach(s=>{const o=orm(s.w,s.r);if(o>mxO)mxO=o;vol+=s.w*s.r;if(s.w>mxW)mxW=s.w;totalReps+=s.r;});
       const cnt=(sess.sets||[]).length;
       const timeLabel=sess.time&&sess.time!=='00:00'?`<div style="font-size:10px;color:var(--text3)">${sess.time}</div>`:'';
-      rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
-        <td class="td-date">${fmtDate(sess.date)}${timeLabel}</td>
-        <td style="color:var(--text3)">${cnt}セット</td>
-        <td>${mxW>0?mxW+' kg':'—'}</td>
-        <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
-        <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
-        <td><button class="btn-del" style="font-size:11px;padding:4px 7px" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button></td>
-      </tr>`;
+      if(isBodyweight){
+        rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
+          <td class="td-date">${fmtDate(sess.date)}${timeLabel}</td>
+          <td style="color:var(--text3)">${cnt}セット</td>
+          <td class="td-vol">${totalReps>0?totalReps+' 回':'—'}</td>
+          <td><button class="btn-del" style="font-size:11px;padding:4px 7px" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button></td>
+        </tr>`;
+      } else {
+        rows+=`<tr class="clickable" onclick="openSetEdit('${sess.id}')">
+          <td class="td-date">${fmtDate(sess.date)}${timeLabel}</td>
+          <td style="color:var(--text3)">${cnt}セット</td>
+          <td>${mxW>0?mxW+' kg':'—'}</td>
+          <td class="td-vol">${vol>0?vol.toFixed(0)+' kg':'—'}</td>
+          <td class="td-1rm">${mxO>0?mxO.toFixed(1)+' kg':'—'}</td>
+          <td><button class="btn-del" style="font-size:11px;padding:4px 7px" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button></td>
+        </tr>`;
+      }
     }
   }
 
@@ -932,6 +942,8 @@ function renderDetail(){
         <div class="stat-box"><div class="stat-val">${st.maxDist||'—'}</div><div class="stat-unit">${st.maxDist?'km':''}</div><div class="stat-label">最大距離</div></div>
         <div class="stat-box"><div class="stat-val">${st.maxCal||'—'}</div><div class="stat-unit">${st.maxCal?'kcal':''}</div><div class="stat-label">最大消費カロリー</div></div>
         <div class="stat-box"><div class="stat-val">${sessList.length}</div><div class="stat-unit">回</div><div class="stat-label">セッション数</div></div>
+        ` : m.type==='自重運動' ? `
+        <div class="stat-box"><div class="stat-val">${sessList.length}</div><div class="stat-unit">回</div><div class="stat-label">セッション数</div></div>
         ` : `
         <div class="stat-box"><div class="stat-val">${st.maxOrm||'—'}</div><div class="stat-unit">${st.maxOrm?'kg':''}</div><div class="stat-label">最大1RM</div></div>
         <div class="stat-box"><div class="stat-val">${st.maxVol||'—'}</div><div class="stat-unit">${st.maxVol?'kg':''}</div><div class="stat-label">最大ボリューム</div></div>
@@ -950,7 +962,7 @@ function renderDetail(){
     <div class="card" style="padding:0;overflow:hidden">
       <div class="table-wrap">
         <table class="hist-table">
-          <thead><tr>${isCardioMenu(m)?'<th>日付</th><th>時間</th><th>距離</th><th>消費Cal</th><th>平均心拍</th><th></th>':'<th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th><th></th>'}</tr></thead>
+          <thead><tr>${isCardioMenu(m)?'<th>日付</th><th>時間</th><th>距離</th><th>消費Cal</th><th>平均心拍</th><th></th>':m.type==='自重運動'?'<th>日付</th><th>セット数</th><th>総回数</th><th></th>':'<th>日付</th><th>セット数</th><th>最大重量</th><th>ボリューム</th><th>1RM</th><th></th>'}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
