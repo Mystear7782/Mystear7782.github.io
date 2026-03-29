@@ -71,6 +71,35 @@ def page_with_cardio(page: Page):
 
 
 @pytest.fixture(scope="function")
+def page_with_bodyweight_menu(page: Page):
+    """「足/自重運動/スクワット」が登録済みのページを提供する"""
+    seed_menu(page, "足", "自重運動", "スクワット")
+    yield page
+
+
+@pytest.fixture(scope="function")
+def page_with_bodyweight_sets(page_with_bodyweight_menu: Page):
+    """スクワットに2セット記録済みのページを提供する（set-edit画面）"""
+    p = page_with_bodyweight_menu
+    open_sidebar(p)
+    p.get_by_text("≡メニュー一覧").click()
+    p.wait_for_timeout(300)
+    p.locator(".menu-row").first.click()
+    p.wait_for_selector("#page-menu-detail.active")
+    p.locator("button.btn-action.new-sess").click()
+    p.wait_for_selector("#page-set-edit.active")
+    # セット1: 10回
+    p.locator("#inp-r").fill("10")
+    p.locator("#btn-add-set").click()
+    p.wait_for_timeout(300)
+    # セット2: 15回
+    p.locator("#inp-r").fill("15")
+    p.locator("#btn-add-set").click()
+    p.wait_for_timeout(300)
+    yield p
+
+
+@pytest.fixture(scope="function")
 def page_with_sets(page_with_menu: Page):
     """ベンチプレスに2セット記録済みのページを提供する"""
     p = page_with_menu

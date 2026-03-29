@@ -713,7 +713,7 @@ const persist = () => {
 })();
 
 // ===== UTILS =====
-const orm = (w,r) => +(w*(1+r/40)).toFixed(1);
+const orm = (w,r) => r===1 ? w : +(w*(1+r/40)).toFixed(1);
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
