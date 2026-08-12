@@ -182,3 +182,29 @@ class TestCsvImport:
             assert result == 3, f"3セットが1セッションにまとめられていない（実際: {result}セット）"
         finally:
             os.unlink(csv_path)
+
+    def test_08_09_html_tag_in_menu_name_not_executed(self, page: Page):
+        """TC-08-09: menu_nameにHTMLタグを含むCSVをインポートしても
+        スクリプトが実行されず、文字列としてそのまま表示される（R-01）"""
+        csv_path = self._create_strength_csv([
+            '"<img src=x onerror=alert(1)>",胸,フリーウェイト,2026-03-25,sess_xss_001,1,60,10,75.0,600',
+        ])
+
+        try:
+            self._go_to_csv_page(page)
+            page.locator("input[type='file']").set_input_files(csv_path)
+            page.wait_for_timeout(1000)
+
+            open_sidebar(page)
+            page.get_by_text("≡メニュー一覧").click()
+            page.wait_for_timeout(300)
+
+            # 文字列としてそのまま表示される（タグが要素として解釈されていない）
+            expect(page.locator(".menu-row-name")).to_contain_text(
+                "<img src=x onerror=alert(1)>"
+            )
+            # 実際に <img> 要素として挿入されていないことを確認
+            assert page.locator(".menu-row-name img").count() == 0, \
+                "menu_nameのHTMLタグが要素として解釈されている"
+        finally:
+            os.unlink(csv_path)

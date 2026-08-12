@@ -2,10 +2,13 @@
 conftest.py - 共通フィクスチャ
 全テストで共有するブラウザ起動・localStorage初期化を提供する
 """
+import os
 import pytest
 from playwright.sync_api import sync_playwright, Page
 
-BASE_URL = "https://mystear7782.github.io/"
+# ローカル検証時は環境変数 E2E_BASE_URL でオーバーライドする
+# 例: E2E_BASE_URL=http://localhost:8000/ pytest tests/e2e/
+BASE_URL = os.environ.get("E2E_BASE_URL", "https://mystear7782.github.io/")
 
 
 def clear_storage(page: Page) -> None:
@@ -23,11 +26,25 @@ def seed_menu(page: Page, category: str, menu_type: str | None, name: str) -> No
 
     page.locator("#sel-cat").select_option(category)
     if menu_type:
-        page.locator(f".type-chip[data-type='{menu_type}']").click()
+        page.locator(f"#type-section .type-chip[data-type='{menu_type}']").click()
     page.locator("#inp-name").fill(name)
     page.locator("#btn-add").click()
     # トーストが消えるまで待つ
     page.wait_for_timeout(2500)
+
+
+def seed_menuset(page: Page, name: str, menu_ids: list[str]) -> None:
+    """メニューセットをlocalStorageへ直接投入する（UI操作より安定するため）"""
+    page.evaluate(
+        """([name, menuIds]) => {
+            const arr = JSON.parse(localStorage.getItem('gl_menusets') || '[]');
+            arr.push({ id: 'mset_' + Date.now(), name, menuIds });
+            localStorage.setItem('gl_menusets', JSON.stringify(arr));
+        }""",
+        [name, menu_ids],
+    )
+    page.reload()
+    page.wait_for_load_state("networkidle")
 
 
 def open_sidebar(page: Page) -> None:
@@ -96,6 +113,17 @@ def page_with_bodyweight_sets(page_with_bodyweight_menu: Page):
     p.locator("#inp-r").fill("15")
     p.locator("#btn-add-set").click()
     p.wait_for_timeout(300)
+    yield p
+
+
+@pytest.fixture(scope="function")
+def page_with_menuset(page_with_menu: Page):
+    """「胸/フリーウェイト/ベンチプレス」を含む「プッシュデー」セットが登録済みのページを提供する"""
+    p = page_with_menu
+    menu_id = p.evaluate(
+        "() => JSON.parse(localStorage.getItem('gl_menus'))[0].id"
+    )
+    seed_menuset(p, "プッシュデー", [menu_id])
     yield p
 
 

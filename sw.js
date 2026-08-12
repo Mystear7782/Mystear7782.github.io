@@ -1,5 +1,5 @@
-const CACHE = 'gymlog-v3';
-const ASSETS = ['./', './index.html', './manifest.json'];
+const CACHE = 'gymlog-v4';
+const ASSETS = ['./', './index.html', './app.js', './style.css', './manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

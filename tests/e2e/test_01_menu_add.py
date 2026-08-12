@@ -59,7 +59,7 @@ class TestMenuAdd:
         """TC-01-01: 筋トレメニューを正常に追加できる"""
         self._go_to_add_menu(page)
         page.locator("#sel-cat").select_option("胸")
-        page.locator(".type-chip[data-type='フリーウェイト']").click()
+        page.locator("#type-section .type-chip[data-type='フリーウェイト']").click()
         page.locator("#inp-name").fill("ベンチプレス")
         page.locator("#btn-add").click()
 
@@ -98,14 +98,14 @@ class TestMenuAdd:
         """TC-01-05: 部位・種別選択済みで名前未入力時に追加ボタンが非活性"""
         self._go_to_add_menu(page)
         page.locator("#sel-cat").select_option("胸")
-        page.locator(".type-chip[data-type='マシン']").click()
+        page.locator("#type-section .type-chip[data-type='マシン']").click()
         expect(page.locator("#btn-add")).to_be_disabled()
 
     def test_01_06_button_enabled_all_filled(self, page: Page):
         """TC-01-06: 全項目入力済みで追加ボタンが活性"""
         self._go_to_add_menu(page)
         page.locator("#sel-cat").select_option("肩")
-        page.locator(".type-chip[data-type='自重運動']").click()
+        page.locator("#type-section .type-chip[data-type='自重運動']").click()
         page.locator("#inp-name").fill("サイドレイズ")
         expect(page.locator("#btn-add")).to_be_enabled()
 
@@ -116,7 +116,7 @@ class TestMenuAdd:
         # 1回目の登録
         self._go_to_add_menu(page)
         page.locator("#sel-cat").select_option("胸")
-        page.locator(".type-chip[data-type='フリーウェイト']").click()
+        page.locator("#type-section .type-chip[data-type='フリーウェイト']").click()
         page.locator("#inp-name").fill("ベンチプレス")
         page.locator("#btn-add").click()
         page.wait_for_timeout(2500)
@@ -124,7 +124,7 @@ class TestMenuAdd:
         # 2回目（重複）
         self._go_to_add_menu(page)
         page.locator("#sel-cat").select_option("胸")
-        page.locator(".type-chip[data-type='マシン']").click()
+        page.locator("#type-section .type-chip[data-type='マシン']").click()
         page.locator("#inp-name").fill("ベンチプレス")
         page.locator("#btn-add").click()
 
@@ -137,7 +137,7 @@ class TestMenuAdd:
         self._go_to_add_menu(page)
         name_30 = "あ" * 30
         page.locator("#sel-cat").select_option("背中")
-        page.locator(".type-chip[data-type='マシン']").click()
+        page.locator("#type-section .type-chip[data-type='マシン']").click()
         page.locator("#inp-name").fill(name_30)
         expect(page.locator("#btn-add")).to_be_enabled()
         page.locator("#btn-add").click()
@@ -155,7 +155,7 @@ class TestMenuAdd:
         self._go_to_add_menu(page)
         name_60 = "a" * 60
         page.locator("#sel-cat").select_option("腕")
-        page.locator(".type-chip[data-type='自重運動']").click()
+        page.locator("#type-section .type-chip[data-type='自重運動']").click()
         page.locator("#inp-name").fill(name_60)
         expect(page.locator("#btn-add")).to_be_enabled()
 
@@ -176,3 +176,25 @@ class TestMenuAdd:
         # 他の部位に戻すと再表示
         page.locator("#sel-cat").select_option("胸")
         expect(page.locator("#type-section")).to_be_visible()
+
+    # ── HTMLエスケープ (R-01) ──
+
+    def test_01_13_html_tag_in_name_displayed_as_text(self, page: Page):
+        """TC-01-13: <b>test</b>という名前のメニューを登録すると、
+        一覧に文字列としてそのまま表示される（太字にならない）"""
+        self._go_to_add_menu(page)
+        page.locator("#sel-cat").select_option("胸")
+        page.locator("#type-section .type-chip[data-type='マシン']").click()
+        page.locator("#inp-name").fill("<b>test</b>")
+        page.locator("#btn-add").click()
+        page.wait_for_timeout(500)
+
+        open_sidebar(page)
+        page.get_by_text("≡メニュー一覧").click()
+        page.wait_for_timeout(300)
+
+        # 文字列としてそのまま表示される
+        expect(page.locator(".menu-row-name")).to_contain_text("<b>test</b>")
+        # 実際に <b> 要素として解釈されていないこと（太字化されていない）
+        assert page.locator(".menu-row-name b").count() == 0, \
+            "メニュー名のHTMLタグが要素として解釈されている（太字になっている）"

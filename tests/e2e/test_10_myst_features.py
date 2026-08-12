@@ -88,7 +88,7 @@ class TestMYST7MenuEdit:
         self._go_to_detail(page_with_menu)
         page_with_menu.locator("button.btn-action.edit-menu").click()
         page_with_menu.locator("#edit-inp-name").fill("インクラインベンチプレス")
-        page_with_menu.locator(".btn-modal-save").click()
+        page_with_menu.locator("#edit-menu-modal .btn-modal-save").click()
         page_with_menu.wait_for_timeout(500)
         expect(page_with_menu.locator(".detail-name")).to_have_text("インクラインベンチプレス")
 
@@ -97,7 +97,7 @@ class TestMYST7MenuEdit:
         self._go_to_detail(page_with_menu)
         page_with_menu.locator("button.btn-action.edit-menu").click()
         page_with_menu.locator("#edit-sel-cat").select_option("肩")
-        page_with_menu.locator(".btn-modal-save").click()
+        page_with_menu.locator("#edit-menu-modal .btn-modal-save").click()
         page_with_menu.wait_for_timeout(500)
         expect(page_with_menu.locator(".detail-tags")).to_contain_text("肩")
 
@@ -106,7 +106,7 @@ class TestMYST7MenuEdit:
         self._go_to_detail(page_with_menu)
         page_with_menu.locator("button.btn-action.edit-menu").click()
         page_with_menu.locator("#edit-type-section .type-chip[data-type='マシン']").click()
-        page_with_menu.locator(".btn-modal-save").click()
+        page_with_menu.locator("#edit-menu-modal .btn-modal-save").click()
         page_with_menu.wait_for_timeout(500)
         expect(page_with_menu.locator(".detail-tags")).to_contain_text("マシン")
 
@@ -121,14 +121,14 @@ class TestMYST7MenuEdit:
         page.wait_for_selector("#page-menu-detail.active")
         page.locator("button.btn-action.edit-menu").click()
         page.locator("#edit-inp-name").fill("ベンチプレス")
-        page.locator(".btn-modal-save").click()
+        page.locator("#edit-menu-modal .btn-modal-save").click()
         expect(page.locator("#toast")).to_contain_text("同じ部位に同名のメニューがあります")
 
     def test_07_08_cancel_closes_modal(self, page_with_menu: Page):
         """TC-07-08: 「キャンセル」ボタンでモーダルが閉じる"""
         self._go_to_detail(page_with_menu)
         page_with_menu.locator("button.btn-action.edit-menu").click()
-        page_with_menu.locator(".btn-modal-cancel").click()
+        page_with_menu.locator("#edit-menu-modal .btn-modal-cancel").click()
         expect(page_with_menu.locator("#edit-menu-modal")).not_to_have_class(
             re.compile(r"show")
         )
@@ -138,7 +138,7 @@ class TestMYST7MenuEdit:
         self._go_to_detail(page_with_menu)
         page_with_menu.locator("button.btn-action.edit-menu").click()
         page_with_menu.locator("#edit-inp-name").fill("ダンベルプレス")
-        page_with_menu.locator(".btn-modal-save").click()
+        page_with_menu.locator("#edit-menu-modal .btn-modal-save").click()
         expect(page_with_menu.locator("#toast")).to_contain_text("ダンベルプレス")
 
     def test_07_10_cardio_category_hides_type_section(self, page_with_menu: Page):

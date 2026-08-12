@@ -9,6 +9,7 @@
 | 1.2 | 2026-03-22 | CSV出力・インポート機能を追加 |
 | 1.3 | 2026-03-22 | メニュー分析機能（カレンダー・メニュービュー・グラフ）の詳細設計を追加。F-01〜F-03の仕様変更を反映 |
 | 1.4 | 2026-03-22 | RM換算表設計を追加。MYST-25（有酸素未記録非表示）・MYST-26（有酸素バッジ重複修正）を反映 |
+| 1.5 | 2026-08-12 | メニューセット機能の設計を追加。§11としてセキュリティ方針（エスケープ・CSP・SRI）を恒久ルール化。状態管理・Service Workerの記述を最新化 |
 
 ---
 
@@ -20,6 +21,7 @@
 |---|---|---|
 | `gl_menus` | JSON配列 | 登録メニューの一覧 |
 | `gl_sessions` | JSONオブジェクト | トレーニング記録（セッション単位） |
+| `gl_menusets` | JSON配列 | メニューセット（既存メニューを複数選んで名前を付けたグループ）の一覧 |
 
 ### 1.2 gl_menus スキーマ
 
@@ -109,6 +111,26 @@
 ```
 
 変換後は `gl_history` キーを削除する。
+
+### 1.5 gl_menusets スキーマ
+
+```json
+[
+  {
+    "id":      "mset_1700000000000",
+    "name":    "プッシュデー",
+    "menuIds": ["menu_1700000000000", "menu_1700000000002"]
+  }
+]
+```
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| id | string | `mset_` + `Date.now()` で生成 |
+| name | string | セット名（全角30文字以内。メニュー名と同じ`onNameInput`バリデーションを流用） |
+| menuIds | 配列 | `gl_menus` の `id` を参照する配列。1件以上必須 |
+
+削除済みメニューを参照する `menuIds` の要素は、一覧表示時に該当メニューが見つからない場合として無視される（セット自体は残る）。マイグレーションは不要（未定義時は空配列にフォールバック）。
 
 ---
 
@@ -363,6 +385,34 @@ isCardioMenu(S.menu) === false
 
 ---
 
+### 3.6 メニューセット（menuset-list）
+
+#### 表示ロジック
+
+```
+gl_menuSets を順に表示（登録順）
+各セットカードに:
+  - セット名
+  - 含まれるメニュー件数
+  - メンバーメニュー一覧（種別タグ・名前・部位）
+  - 編集／削除ボタン
+```
+
+#### 作成・編集モーダル（menuset-modal）
+
+| 項目 | 部品 | バリデーション |
+|---|---|---|
+| セット名 | テキスト入力 | 必須・全角30文字以内 |
+| 含めるメニュー | チェックボックスリスト（`gl_menus`の未アーカイブ分を列挙） | 1件以上必須 |
+
+保存時、新規は `S.menuSets.push()`、編集は該当セットの `name`/`menuIds` を上書きして `persist()`。
+
+#### 削除
+
+確認ダイアログ（`confirm()`）後に `S.menuSets` から該当セットを除去する。セットに含まれるメニュー自体・そのセッション記録は削除しない。
+
+---
+
 ## 4. UI設計
 
 ### 4.1 デザインコンセプト
@@ -437,7 +487,7 @@ activate:
 
 ### 5.3 現在のキャッシュバージョン
 
-`gymlog-v3`
+`gymlog-v4`（R-03でindex.html/app.js/style.cssに3分割した際に更新。`ASSETS`配列に`app.js`・`style.css`を追加）
 
 ---
 
@@ -449,6 +499,7 @@ activate:
 const S = {
   menus:        [],      // gl_menus の内容（配列）
   sessions:     {},      // gl_sessions の内容（オブジェクト）
+  menuSets:     [],      // gl_menusets の内容（配列）
   menu:         null,    // 現在選択中のメニューオブジェクト
   sessionId:    null,    // 現在編集中のセッションID
   editingSetIdx: null,   // 編集中のセットインデックス（null: 新規追加モード）
@@ -462,6 +513,7 @@ const S = {
 const persist = () => {
   localStorage.setItem('gl_menus',    JSON.stringify(S.menus));
   localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
+  localStorage.setItem('gl_menusets', JSON.stringify(S.menuSets));
 };
 ```
 
@@ -736,4 +788,66 @@ go('rm') 呼び出し時に initRMPage() を実行
   └── rm-inp-w, rm-inp-r, rm-inp-max をクリア
   └── 推定1RM結果を非表示
   └── 換算テーブルをエンプティ状態に戻す
+```
+
+---
+
+## 10. ファイル構成（HTML/JS/CSS分割）
+
+`index.html`（DOM構造のみ）・`app.js`（全JavaScript）・`style.css`（全CSS）の3ファイルに分割している。
+
+| ファイル | 読み込み方法 |
+|---|---|
+| `style.css` | `<head>`内で`<link rel="stylesheet" href="./style.css">` |
+| `app.js` | `<body>`末尾で`<script src="./app.js"></script>`（クラシックスクリプト。`type="module"`にしない） |
+
+分割の際は移動のみとし、リファクタリング・命名変更を混ぜないこと。`onclick="..."`等のインラインイベントハンドラは全DOM要素で使われ続けており、`app.js`はグローバル関数宣言を前提としているため、モジュール化すると壊れる。
+
+---
+
+## 11. セキュリティ方針（恒久ルール）
+
+本アプリはGitHub Pagesで配信されるクライアントサイド完結のPWAであり、`index.html`の内容は誰でも閲覧できる。認証・Cookie・サーバー側ストレージを持たないため、想定される最悪ケースは「利用者自身のトレーニング記録の改ざん・外部送信」に限定されるが、対策コストが小さいため以下を恒久ルールとして維持する。
+
+### 11.1 HTMLエスケープ
+
+```javascript
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+```
+
+- 利用者由来の全ての値を`innerHTML`へ挿入する前に`esc()`で包む。対象：メニュー名`name`、種別`type`、部位`category`、メニューセット名`name`、CSV由来の全フィールド
+- アプリが生成する値（`id`、日付、計算結果の数値）は対象外
+- 新規に`innerHTML`を書く際は、利用者由来の値を素で埋めないことをルール化する
+
+### 11.2 SRI（Subresource Integrity）
+
+Chart.jsを動的読み込みする箇所（`waitForChartJs()`）で`integrity`属性（sha512、cdnjs公開ハッシュ）と`crossOrigin = 'anonymous'`を設定する。バージョンを上げる際はハッシュの再取得・更新が必須。
+
+### 11.3 CSP（Content Security Policy）
+
+`index.html`の`<head>`にmetaタグで指定する（GitHub Pagesはレスポンスヘッダを設定できないため）。
+
+```html
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com;
+  img-src 'self' data:;
+  connect-src 'self'">
+```
+
+`onclick`等のインラインイベントハンドラを全DOM要素で多用しているため、`script-src`/`style-src`の`'unsafe-inline'`は撤去できない（onclick属性をaddEventListenerに置き換える大規模改修をしない限り）。`connect-src 'self'`により、万一スクリプトが混入しても外部への送信は遮断される。
+
+### 11.4 リポジトリ衛生
+
+`.gitignore`で以下を追跡対象から除外する。
+
+```gitignore
+__pycache__/
+*.pyc
+.claude/settings.local.json
+reports/
+.pytest_cache/
 ```
