@@ -107,7 +107,9 @@ class TestMenuSetListDisplay:
         """TC-11-07: セットをクリックすると含まれるメニューが表示される"""
         p = page_with_menuset
         _go_to_menuset_page(p)
-        expect(p.locator(".menuset-member-name", has_text="ベンチプレス")).to_be_visible()
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        expect(p.locator("#menuset-detail-body .menu-row-name", has_text="ベンチプレス")).to_be_visible()
 
     def test_11_08_list_shows_member_count(self, page_with_menuset: Page):
         """TC-11-08: セットカードにメニュー件数が表示される"""
@@ -172,7 +174,9 @@ class TestMenuSetEditDelete:
         p.locator("#menuset-modal .btn-modal-save").click()
         p.wait_for_timeout(500)
 
-        expect(p.locator(".menuset-member-name", has_text="スクワット")).to_be_visible()
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        expect(p.locator("#menuset-detail-body .menu-row-name", has_text="スクワット")).to_be_visible()
 
     def test_11_13_delete_removes_from_list(self, page_with_menuset: Page):
         """TC-11-13: セットを削除すると一覧から消える"""
@@ -201,3 +205,66 @@ class TestMenuSetEditDelete:
         p.get_by_text("≡メニュー一覧").click()
         p.wait_for_selector("#page-menu-list.active")
         expect(p.locator(".menu-row-name", has_text="ベンチプレス")).to_be_visible()
+
+
+class TestMenuSetDetail:
+    """UC-28拡張: セットをタップすると含まれるメニュー一覧に遷移し、メニューからメニュー詳細に遷移できる"""
+
+    def test_11_16_click_card_navigates_to_detail(self, page_with_menuset: Page):
+        """TC-11-16: セットカードをクリックするとセット詳細画面に遷移する"""
+        p = page_with_menuset
+        _go_to_menuset_page(p)
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        expect(p.locator("#menuset-detail-body")).to_contain_text("プッシュデー")
+
+    def test_11_17_detail_shows_member_menu_rows(self, page_with_menuset: Page):
+        """TC-11-17: セット詳細画面にメニュー一覧と同じ形式でメンバーメニューが表示される"""
+        p = page_with_menuset
+        _go_to_menuset_page(p)
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        expect(p.locator("#menuset-detail-body .menu-row-name", has_text="ベンチプレス")).to_be_visible()
+
+    def test_11_18_click_member_menu_navigates_to_menu_detail(self, page_with_menuset: Page):
+        """TC-11-18: メンバーメニューをクリックするとメニュー詳細画面に遷移する"""
+        p = page_with_menuset
+        _go_to_menuset_page(p)
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        p.locator("#menuset-detail-body .menu-row").first.click()
+        p.wait_for_selector("#page-menu-detail.active")
+        expect(p.locator(".detail-name")).to_contain_text("ベンチプレス")
+
+    def test_11_19_back_from_menu_detail_returns_to_menuset_detail(self, page_with_menuset: Page):
+        """TC-11-19: セット経由で開いたメニュー詳細の戻るボタンはセット詳細に戻る"""
+        p = page_with_menuset
+        _go_to_menuset_page(p)
+        p.locator(".prog-card").first.click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        p.locator("#menuset-detail-body .menu-row").first.click()
+        p.wait_for_selector("#page-menu-detail.active")
+        expect(p.locator("#menu-detail-back-label")).to_have_text("セットに戻る")
+        p.locator("#menu-detail-back").click()
+        p.wait_for_selector("#page-menuset-detail.active")
+        expect(p.locator("#page-menuset-detail.active")).to_be_visible()
+
+    def test_11_20_edit_button_does_not_navigate_to_detail(self, page_with_menuset: Page):
+        """TC-11-20: セットカードの「編集」ボタンはカードクリックと衝突せずモーダルのみ開く"""
+        p = page_with_menuset
+        _go_to_menuset_page(p)
+        p.locator(".prog-card button", has_text="編集").click()
+        p.wait_for_selector("#menuset-modal.show")
+        expect(p.locator("#page-menuset-detail")).not_to_have_class(__import__("re").compile(r"\bactive\b"))
+
+    def test_11_21_normal_menu_detail_back_unaffected(self, page_with_menu: Page):
+        """TC-11-21: メニュー一覧から直接開いた場合の戻るボタンは従来どおり一覧に戻る（リグレッション確認）"""
+        p = page_with_menu
+        open_sidebar(p)
+        p.get_by_text("≡メニュー一覧").click()
+        p.wait_for_timeout(300)
+        p.locator(".menu-row").first.click()
+        p.wait_for_selector("#page-menu-detail.active")
+        expect(p.locator("#menu-detail-back-label")).to_have_text("一覧に戻る")
+        p.locator("#menu-detail-back").click()
+        p.wait_for_selector("#page-menu-list.active")

@@ -4,7 +4,7 @@ const S = {
   menus:    JSON.parse(localStorage.getItem('gl_menus')    || '[]'),
   sessions: JSON.parse(localStorage.getItem('gl_sessions') || '{}'),
   menuSets: JSON.parse(localStorage.getItem('gl_menusets') || '[]'),
-  menu: null, sessionId: null, editingSetIdx: null, showArchived: false,
+  menu: null, menuSet: null, sessionId: null, editingSetIdx: null, showArchived: false,
   fromCalendar: false, // カレンダーから遷移したかどうか
 };
 
@@ -61,7 +61,7 @@ const toast = msg => {
   setTimeout(() => t.classList.remove('show'), 2200);
 };
 const tagClass = t => ({マシン:'tag-machine',フリーウェイト:'tag-free',自重運動:'tag-body',有酸素運動:'tag-cardio'}[t]||'');
-const dotColor = c => ({胸:'#f87171',背中:'#fb923c',肩:'#facc15',足:'#4ade80',腕:'#60a5fa',有酸素運動:'#c084fc'}[c]||'#9ca3af');
+const dotColor = c => ({胸:'#f87171',背中:'#fb923c',肩:'#facc15',足:'#4ade80',腕:'#60a5fa',有酸素運動:'#c084fc',その他:'#9ca3af'}[c]||'#9ca3af');
 
 const isCardioMenu = m => m && m.category === '有酸素運動';
 
@@ -110,20 +110,21 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('page-title').textContent = TITLES[page]||page;
   document.querySelectorAll('.sb-item[data-page]').forEach(i=>i.classList.toggle('active',i.dataset.page===page));
   closeSidebar();
-  if(page==='menu-list')    renderList();
-  if(page==='menu-detail')  renderDetail();
-  if(page==='menuset-list') renderMenuSetList();
-  if(page==='set-edit')     renderSetEdit();
-  if(page==='analysis')     renderAnalysis();
+  if(page==='menu-list')      renderList();
+  if(page==='menu-detail')    renderDetail();
+  if(page==='menuset-list')   renderMenuSetList();
+  if(page==='menuset-detail') renderMenuSetDetail();
+  if(page==='set-edit')       renderSetEdit();
+  if(page==='analysis')       renderAnalysis();
   if(page==='analysis-detail') renderAnalysisDetail();
-  if(page==='rm')           initRMPage();
+  if(page==='rm')             initRMPage();
 }
 
 // ===== ADD MENU =====
@@ -159,7 +160,7 @@ function addMenu() {
 }
 
 // ===== MENU LIST =====
-const CATS=['胸','背中','肩','足','腕','有酸素運動'];
+const CATS=['胸','背中','肩','足','腕','その他','有酸素運動'];
 function toggleShowArchived() {
   S.showArchived=!S.showArchived;
   const btn=document.getElementById('toggle-archive-btn');
@@ -183,7 +184,7 @@ function renderList() {
     html+=`<div class="group-block"><div class="group-head"><div class="group-dot" style="background:${dotColor(cat)}"></div><div class="group-name">${cat}</div><div class="group-cnt">${items.length}件</div></div><div class="menu-list">`;
     for(const m of items){
       const st=menuStats(m.id);
-      html+=`<div class="menu-row${m.archived?' archived':''}" onclick="openDetail('${m.id}')">
+      html+=`<div class="menu-row${m.archived?' archived':''}" data-id="${m.id}" data-cat="${esc(cat)}" onclick="handleMenuRowClick(event,'${m.id}')" onpointerdown="onRowPointerDown(event,this)">
         <div class="menu-row-left">
           <div class="menu-row-name">${esc(m.name)}</div>
           <div class="menu-row-tags">
@@ -207,7 +208,105 @@ function renderList() {
   }
   el.innerHTML=html;
 }
-function openDetail(id){S.menu=S.menus.find(m=>m.id===id);go('menu-detail');}
+// ===== MENU LIST: 長押しで並び替え =====
+let suppressNextClick = false;
+
+function handleMenuRowClick(e, id){
+  if(suppressNextClick){ suppressNextClick=false; return; }
+  openDetail(id);
+}
+
+function onRowPointerDown(e, el){
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  const startX=e.clientX, startY=e.clientY;
+  let armed=false, dragging=false;
+  let baseY=0, curList=null, curCat=null;
+
+  const longPressTimer = setTimeout(()=>{
+    armed=true;
+    el.classList.add('drag-armed');
+    if(navigator.vibrate) navigator.vibrate(25);
+  }, 500);
+
+  function onMove(ev){
+    if(!armed){
+      if(Math.abs(ev.clientX-startX)>10 || Math.abs(ev.clientY-startY)>10){
+        clearTimeout(longPressTimer);
+        cleanup();
+      }
+      return;
+    }
+    if(!dragging){
+      dragging=true;
+      el.classList.remove('drag-armed');
+      el.classList.add('dragging');
+      curList=el.parentElement;
+      curCat=el.dataset.cat;
+      baseY=ev.clientY;
+    }
+    const dy = ev.clientY - baseY;
+    el.style.transform=`translateY(${dy}px)`;
+    const rect = el.getBoundingClientRect();
+    const centerY = rect.top+rect.height/2;
+    const siblings=[...curList.querySelectorAll('.menu-row')].filter(s=>s!==el);
+    for(const sib of siblings){
+      const sRect=sib.getBoundingClientRect();
+      const sCenterY=sRect.top+sRect.height/2;
+      if(dy>0 && centerY>sCenterY){
+        curList.insertBefore(el, sib.nextSibling);
+        baseY=ev.clientY; el.style.transform='translateY(0px)';
+        break;
+      } else if(dy<0 && centerY<sCenterY){
+        curList.insertBefore(el, sib);
+        baseY=ev.clientY; el.style.transform='translateY(0px)';
+        break;
+      }
+    }
+  }
+  function onUp(){
+    clearTimeout(longPressTimer);
+    if(dragging){
+      el.classList.remove('dragging');
+      el.style.transform='';
+      commitMenuOrder(curCat, curList);
+      suppressNextClick=true;
+      setTimeout(()=>{suppressNextClick=false;},50);
+    } else if(armed){
+      el.classList.remove('drag-armed');
+    }
+    cleanup();
+  }
+  function cleanup(){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+  }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+}
+
+function commitMenuOrder(cat, listEl){
+  const ids = [...listEl.querySelectorAll('.menu-row')].map(r=>r.dataset.id);
+  const catMenusInNewOrder = ids.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
+  let idx=0;
+  S.menus = S.menus.map(m => (m.category===cat && ids.includes(m.id)) ? catMenusInNewOrder[idx++] : m);
+  persist();
+}
+
+function openDetail(id, fromPage){
+  S.menu=S.menus.find(m=>m.id===id);
+  const back = document.getElementById('menu-detail-back');
+  const backLabel = document.getElementById('menu-detail-back-label');
+  if(fromPage==='menuset-detail'){
+    back.onclick=()=>go('menuset-detail');
+    backLabel.textContent='セットに戻る';
+  } else {
+    back.onclick=()=>go('menu-list');
+    backLabel.textContent='一覧に戻る';
+  }
+  go('menu-detail');
+}
 
 // ===== MENU DETAIL =====
 function renderDetail(){
@@ -395,27 +494,64 @@ function renderMenuSetList() {
   }
   el.innerHTML = S.menuSets.map(set => {
     const memberMenus = set.menuIds.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
-    const memberHtml = memberMenus.length
-      ? memberMenus.map(m => `<div class="menuset-member">
-          <span class="tag ${tagClass(m.type)}">${esc(m.type)}</span>
-          <span class="menuset-member-name">${esc(m.name)}</span>
-          <span class="menuset-member-cat">${esc(m.category)}</span>
-        </div>`).join('')
-      : `<div style="font-size:12px;color:var(--text3);padding:8px 0">メニューがありません（削除されたか未選択）</div>`;
-    return `<div class="prog-card">
+    return `<div class="prog-card clickable" onclick="openMenuSetDetail('${set.id}')">
       <div class="prog-card-head">
         <div>
           <div class="prog-card-name">${esc(set.name)}</div>
           <div class="prog-card-meta">${memberMenus.length}件のメニュー</div>
         </div>
+        <span class="row-chevron">›</span>
       </div>
-      <div class="menuset-members">${memberHtml}</div>
       <div class="menu-actions" style="margin-top:10px;margin-bottom:0">
-        <button class="btn-mini" onclick="openEditMenuSet('${set.id}')">編集</button>
-        <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="deleteMenuSet('${set.id}')">削除</button>
+        <button class="btn-mini" onclick="event.stopPropagation();openEditMenuSet('${set.id}')">編集</button>
+        <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="event.stopPropagation();deleteMenuSet('${set.id}')">削除</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function openMenuSetDetail(setId) {
+  S.menuSet = S.menuSets.find(s=>s.id===setId);
+  if(!S.menuSet) return;
+  go('menuset-detail');
+}
+
+function renderMenuSetDetail() {
+  const el = document.getElementById('menuset-detail-body');
+  const set = S.menuSet;
+  if(!set) return;
+  const memberMenus = set.menuIds.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
+  const rowsHtml = memberMenus.length
+    ? memberMenus.map(m => {
+        const st = menuStats(m.id);
+        return `<div class="menu-row" onclick="openDetail('${m.id}','menuset-detail')">
+          <div class="menu-row-left">
+            <div class="menu-row-name">${esc(m.name)}</div>
+            <div class="menu-row-tags">
+              <span class="tag ${tagClass(m.type)}">${esc(m.type)}</span>
+              ${st.lastDate?`<span style="font-size:11px;color:var(--text3)">最終: ${fmtDate(st.lastDate)}</span>`:''}
+            </div>
+          </div>
+          <div class="menu-row-right">
+            ${isCardioMenu(m)
+              ? ''
+              : st.maxOrm>0
+                ? `<div class="row-1rm">${st.maxOrm}<span class="row-1rm-unit"> kg</span></div><div class="row-1rm-label">最大1RM</div>`
+                : '<div style="font-size:12px;color:var(--text3)">未記録</div>'
+            }
+          </div>
+          <span class="row-chevron">›</span>
+        </div>`;
+      }).join('')
+    : `<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-title">メニューがありません</div><div class="empty-desc">セットに含まれるメニューが削除されたか、選択されていません</div></div>`;
+
+  el.innerHTML = `
+    <div class="sec-head">
+      <div class="sec-title">${esc(set.name)}</div>
+      <div class="sec-sub">${memberMenus.length}件のメニュー</div>
+    </div>
+    <div class="menu-list">${rowsHtml}</div>
+  `;
 }
 
 function populateMenuSetChecklist(selectedIds) {
@@ -957,7 +1093,7 @@ function goToMenuDetail(menuId) {
 }
 
 // ===== ANALYSIS MENU VIEW =====
-const ANA_CATS = ['胸','背中','肩','足','腕'];
+const ANA_CATS = ['胸','背中','肩','足','腕','その他'];
 function renderAnaMenuList() {
   const el = document.getElementById('ana-menu-view');
   const menus = S.menus.filter(m => m.category !== '有酸素運動');

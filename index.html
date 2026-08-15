@@ -73,6 +73,7 @@
               <option value="胸">胸</option><option value="背中">背中</option>
               <option value="肩">肩</option><option value="足">足</option>
               <option value="腕">腕</option><option value="有酸素運動">有酸素運動</option>
+              <option value="その他">その他</option>
             </select>
           </div>
         </div>
@@ -113,9 +114,9 @@
 
     <!-- MENU DETAIL -->
     <div class="page" id="page-menu-detail">
-      <button class="back-btn" onclick="go('menu-list')">
+      <button class="back-btn" id="menu-detail-back" onclick="go('menu-list')">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
-        一覧に戻る
+        <span id="menu-detail-back-label">一覧に戻る</span>
       </button>
       <div id="detail-body"></div>
     </div>
@@ -128,6 +129,15 @@
       </div>
       <button class="btn-primary" style="margin-bottom:14px" onclick="openNewMenuSet()">＋ 新規セットを作成</button>
       <div id="menuset-list-body"></div>
+    </div>
+
+    <!-- MENU SET DETAIL -->
+    <div class="page" id="page-menuset-detail">
+      <button class="back-btn" onclick="go('menuset-list')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>
+        セット一覧に戻る
+      </button>
+      <div id="menuset-detail-body"></div>
     </div>
 
     <!-- SET EDIT -->
@@ -313,6 +323,7 @@
           <option value="足">足</option>
           <option value="腕">腕</option>
           <option value="有酸素運動">有酸素運動</option>
+          <option value="その他">その他</option>
         </select>
       </div>
     </div>

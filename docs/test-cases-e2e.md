@@ -8,6 +8,7 @@
 | 1.1 | 2026-03-22 | テスト実行結果を反映。仕様誤りの修正・アサーション方針の変更・TC-08-07の対象変更 |
 | 1.2 | 2026-03-22 | TC-09系（RM換算表）を追加。全89件 |
 | 1.3 | 2026-08-12 | TC-10系（メニュー編集・セッション削除・自重運動）、TC-11系（メニューセット）を追加。R-01のHTMLエスケープ検証（TC-01-13, TC-08-09）を追加。ローカル検証用に`E2E_BASE_URL`環境変数によるオーバーライドに対応。全144件 |
+| 1.4 | 2026-08-15 | TC-11系にメニューセット詳細画面のケースを追加。TC-12系（メニュー一覧の長押し並び替え、部位「その他」）を新規追加。全158件 |
 
 ---
 
@@ -21,16 +22,17 @@
 
 ```
 tests/e2e/
-├── conftest.py                      # 共通フィクスチャ（ブラウザ起動・localStorage初期化）
-├── test_01_menu_add.py              # メニュー追加・ナビゲーション・HTMLエスケープ
-├── test_02_03_menu_list_archive.py  # メニュー一覧・アーカイブ・復元・削除
-├── test_04_set_record.py            # セット記録（筋トレ）・メニュー詳細統計
-├── test_05_cardio_record.py         # 有酸素運動記録
-├── test_07_analysis.py              # メニュー分析
-├── test_08_csv.py                   # CSV出力・入力・HTMLエスケープ
-├── test_09_rm_calculator.py         # RM換算表
-├── test_10_myst_features.py         # メニュー編集・セッション削除・自重運動記録
-└── test_11_menuset_crud.py          # メニューセットの作成・一覧・編集・削除
+├── conftest.py                              # 共通フィクスチャ（ブラウザ起動・localStorage初期化）
+├── test_01_menu_add.py                      # メニュー追加・ナビゲーション・HTMLエスケープ
+├── test_02_03_menu_list_archive.py          # メニュー一覧・アーカイブ・復元・削除
+├── test_04_set_record.py                    # セット記録（筋トレ）・メニュー詳細統計
+├── test_05_cardio_record.py                 # 有酸素運動記録
+├── test_07_analysis.py                      # メニュー分析
+├── test_08_csv.py                           # CSV出力・入力・HTMLエスケープ
+├── test_09_rm_calculator.py                 # RM換算表
+├── test_10_myst_features.py                 # メニュー編集・セッション削除・自重運動記録
+├── test_11_menuset_crud.py                  # メニューセットの作成・一覧・編集・削除・詳細画面遷移
+└── test_12_menu_reorder_and_other_cat.py    # メニュー一覧の長押し並び替え・部位「その他」
 ```
 
 ---
@@ -151,7 +153,9 @@ page.wait_for_selector("#page-set-edit.active")
 
 **上記89件に加え、TC-10系（メニュー編集・セッション削除・自重運動、33件）・TC-11系（メニューセット、15件）・TC-01-13/TC-08-09（HTMLエスケープ検証、2件）・自重メニュー詳細検証（5件）を追加。**
 
-**合計: 144件 全Pass ✅**（詳細は `test_10_myst_features.py` / `test_11_menuset_crud.py` のdocstringを参照）
+**上記144件に加え、TC-11系のメニューセット詳細画面ケース（6件）・TC-12系のメニュー並び替え/部位「その他」（8件）を追加。**
+
+**合計: 158件 全Pass ✅**（詳細は各テストファイルのdocstringを参照）
 
 ---
 

@@ -10,6 +10,7 @@
 | 1.3 | 2026-03-22 | メニュー分析機能（カレンダー・メニュービュー・グラフ）の詳細設計を追加。F-01〜F-03の仕様変更を反映 |
 | 1.4 | 2026-03-22 | RM換算表設計を追加。MYST-25（有酸素未記録非表示）・MYST-26（有酸素バッジ重複修正）を反映 |
 | 1.5 | 2026-08-12 | メニューセット機能の設計を追加。§11としてセキュリティ方針（エスケープ・CSP・SRI）を恒久ルール化。状態管理・Service Workerの記述を最新化 |
+| 1.6 | 2026-08-15 | メニューセット詳細画面、メニュー一覧の長押し並び替え、部位「その他」の設計を追加 |
 
 ---
 
@@ -41,7 +42,7 @@
 |---|---|---|
 | id | string | `menu_` + `Date.now()` で生成 |
 | name | string | メニュー名（全角30文字以内） |
-| category | string | 部位（胸 / 背中 / 肩 / 足 / 腕 / 有酸素運動） |
+| category | string | 部位（胸 / 背中 / 肩 / 足 / 腕 / その他 / 有酸素運動） |
 | type | string | 種別（マシン / フリーウェイト / 自重運動 / 有酸素運動） |
 | archived | boolean | アーカイブ状態（true: 一覧非表示） |
 
@@ -195,6 +196,25 @@ const fmtDate = d => {
   return `${y}年${parseInt(m)}月${parseInt(day)}日`;
 };
 ```
+
+### 2.5 メニュー一覧の長押し並び替え
+
+Pointer Eventsを用いた自前実装。HTML5 Drag and Drop APIはタッチデバイスで動作しないため採用しない。
+
+```
+onpointerdown（各 .menu-row）
+  └── 500ms タイマー開始
+        ├── 500ms以内に10px以上移動 → タイマー破棄（スクロール操作とみなし何もしない）
+        └── 500ms経過 → armed状態（drag-armedクラス付与・振動フィードバック）
+              └── armed状態で実際に移動 → dragging状態に遷移（draggingクラス付与）
+                    ├── pointermoveのたびに translateY で追従
+                    ├── 兄弟 .menu-row との中心Y座標を比較し、超えたら DOM 上で入れ替え
+                    └── pointerup → 最終DOM順序を読み取り、同一カテゴリ内の S.menus を並び替えて persist()
+```
+
+- 並び替えは**同一部位（category）内に限定**する。他部位への移動はサポートしない
+- ドラッグ確定後の pointerup 直後は `suppressNextClick` フラグを立て、ブラウザが自動発火する `click` イベント（＝意図しないメニュー詳細への遷移）を1回だけ無効化する
+- 通常の短いタップ（長押ししない操作）は従来どおり `openDetail()` が呼ばれる
 
 ---
 
@@ -394,8 +414,8 @@ gl_menuSets を順に表示（登録順）
 各セットカードに:
   - セット名
   - 含まれるメニュー件数
-  - メンバーメニュー一覧（種別タグ・名前・部位）
-  - 編集／削除ボタン
+  - 編集／削除ボタン（クリック時は event.stopPropagation() でカード本体のクリックと分離）
+カード本体をクリック → openMenuSetDetail(setId) → menuset-detail へ遷移
 ```
 
 #### 作成・編集モーダル（menuset-modal）
@@ -410,6 +430,36 @@ gl_menuSets を順に表示（登録順）
 #### 削除
 
 確認ダイアログ（`confirm()`）後に `S.menuSets` から該当セットを除去する。セットに含まれるメニュー自体・そのセッション記録は削除しない。
+
+---
+
+### 3.7 メニューセット詳細（menuset-detail）
+
+セットに含まれるメニューを、メニュー一覧（menu-list）と同じ `.menu-row` 形式で一覧表示する画面。
+
+```
+openMenuSetDetail(setId)
+  └── S.menuSet = 該当セット
+  └── go('menuset-detail')
+        └── renderMenuSetDetail()
+              ├── set.menuIds を S.menus から解決（削除済みメニューは filter で除外）
+              └── 各行を onclick="openDetail(menuId, 'menuset-detail')" として描画
+```
+
+#### メニュー詳細への遷移と戻り先の制御
+
+`openDetail(id, fromPage)` の第2引数で遷移元を受け取り、戻るボタン（`#menu-detail-back`）の遷移先とラベルを動的に切り替える。
+
+| 遷移元 | 戻るボタンの動作 | ラベル |
+|---|---|---|
+| メニュー一覧（`fromPage` 省略） | `go('menu-list')` | 一覧に戻る |
+| メニューセット詳細（`fromPage='menuset-detail'`） | `go('menuset-detail')` | セットに戻る |
+
+戻るボタンの `onclick` は `document.getElementById('menu-detail-back').onclick = ...` で都度上書きする（set-edit画面の `#set-back` と同じパターン）。
+
+#### メンバーメニューが削除されていた場合
+
+`set.menuIds` に含まれるが `gl_menus` に存在しないIDは一覧から除外される。全メンバーが削除済みの場合は空状態メッセージを表示する。
 
 ---
 
