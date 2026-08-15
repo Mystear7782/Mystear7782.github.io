@@ -226,7 +226,7 @@ function onRowPointerDown(e, el){
     armed=true;
     el.classList.add('drag-armed');
     if(navigator.vibrate) navigator.vibrate(25);
-  }, 500);
+  }, 2000);
 
   function onMove(ev){
     if(!armed){

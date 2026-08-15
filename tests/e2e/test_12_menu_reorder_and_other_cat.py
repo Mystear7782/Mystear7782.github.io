@@ -31,7 +31,7 @@ class TestMenuReorder:
         cy = box["y"] + box["height"] / 2
         page.mouse.move(cx, cy)
         page.mouse.down()
-        page.wait_for_timeout(650)  # 長押し確定(500ms)を確実に超える
+        page.wait_for_timeout(2200)  # 長押し確定(2000ms)を確実に超える
         page.mouse.move(cx, cy + dy, steps=10)
         page.mouse.up()
         page.wait_for_timeout(300)

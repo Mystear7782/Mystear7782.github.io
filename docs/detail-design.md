@@ -203,9 +203,9 @@ Pointer Eventsを用いた自前実装。HTML5 Drag and Drop APIはタッチデ�
 
 ```
 onpointerdown（各 .menu-row）
-  └── 500ms タイマー開始
-        ├── 500ms以内に10px以上移動 → タイマー破棄（スクロール操作とみなし何もしない）
-        └── 500ms経過 → armed状態（drag-armedクラス付与・振動フィードバック）
+  └── 2000ms タイマー開始
+        ├── 2000ms以内に10px以上移動 → タイマー破棄（スクロール操作とみなし何もしない）
+        └── 2000ms経過 → armed状態（drag-armedクラス付与・振動フィードバック）
               └── armed状態で実際に移動 → dragging状態に遷移（draggingクラス付与）
                     ├── pointermoveのたびに translateY で追従
                     ├── 兄弟 .menu-row との中心Y座標を比較し、超えたら DOM 上で入れ替え

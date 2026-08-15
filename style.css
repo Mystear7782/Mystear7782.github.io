@@ -134,7 +134,7 @@ input,select{font-family:var(--font)}
 .group-name{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.6px;text-transform:uppercase}
 .group-cnt{margin-left:auto;font-size:11px;color:var(--text3);background:var(--bg3);padding:1px 8px;border-radius:20px;border:1px solid var(--border)}
 .menu-list{display:flex;flex-direction:column;gap:8px}
-.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative}
+.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)}
 .menu-row.drag-armed{box-shadow:var(--shadow);transform:scale(1.02)}
 .menu-row.dragging{z-index:50;box-shadow:var(--shadow);opacity:.92;transition:none;touch-action:none}
