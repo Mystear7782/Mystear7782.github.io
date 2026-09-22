@@ -1581,6 +1581,47 @@ function showMenusDebug() {
   el.focus();
   el.select();
 }
+// gl_menusが万一失われた場合の復旧用: gl_sessionsは menuId をキーとする構造なので、
+// CSVエクスポート(session_id→menu_name/category/type)と突き合わせれば元のmenu_idを復元できる。
+function showSessionsDebug() {
+  const el = document.getElementById('sessions-debug-out');
+  if (!el) return;
+  el.value = localStorage.getItem('gl_sessions') || '{}';
+  el.style.display = 'block';
+  el.focus();
+  el.select();
+}
+// Supabase接続の直接テスト（一時的）: 現在のセッションと生のexercises取得結果/エラーをそのまま表示する
+async function testSupabaseExercises() {
+  const el = document.getElementById('supa-test-out');
+  if (!el) return;
+  el.style.display = 'block';
+  el.value = '実行中...';
+  const out = {};
+  try {
+    const session = await SupaClient.auth.getSession();
+    out.hasSession = !!session;
+    out.currentSessionUserId = session ? session.user.id : null;
+    out.currentSessionEmail = session ? session.user.email : null;
+  } catch (e) {
+    out.sessionError = (e && e.message) ? e.message : String(e);
+  }
+  try {
+    const rows = await SupaClient.exercises.list();
+    out.dataLength = rows.length;
+    out.data = rows;
+  } catch (e) {
+    out.queryError = {
+      message: e && e.message,
+      code: e && e.code,
+      details: e && e.details,
+      hint: e && e.hint,
+    };
+  }
+  el.value = JSON.stringify(out, null, 2);
+  el.focus();
+  el.select();
+}
 
 function showImportResult(type, msg) {
   const el = document.getElementById('import-result');
@@ -1637,6 +1678,13 @@ async function handleLogin() {
 async function loadExercisesFromSupabase() {
   try {
     const rows = await SupaClient.exercises.list();
+    // 安全策: Supabase側がまだ空（未移行）なのにローカルには既存メニューがある場合は上書きしない。
+    // これが無いと、DDL実行直後・データ未移行の状態でログインしただけでローカルの既存メニューが
+    // 消えてしまう（gl_menusがpersist()で空配列に上書きされる）。
+    if (rows.length === 0 && S.menus.length > 0) {
+      toast('Supabase側にまだメニューが登録されていないため、ローカルの内容を保持します');
+      return;
+    }
     S.menus = rows.map(r => ({ id: r.id, name: r.name, category: r.category, type: r.type, archived: r.archived }));
     persist();
   } catch (e) {
