@@ -1625,7 +1625,9 @@ async function handleLogin() {
     await loadExercisesFromSupabase();
     renderList();
   } catch (e) {
-    setAuthError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+    // デバッグのため実際のエラーメッセージも表示する（原因切り分け用、後で簡潔なメッセージに戻す）
+    const detail = (e && e.message) ? e.message : String(e);
+    setAuthError('ログインに失敗しました: ' + detail);
   } finally {
     btn.disabled = false;
   }

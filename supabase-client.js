@@ -16,7 +16,7 @@
 // DB側のRow Level Security（本DDLで全テーブルに設定済み）が担う。
 // 絶対に埋め込んではいけないのはsecret key（RLSを迂回する管理者キー）のみ。
 const SUPABASE_URL = 'https://swncmbsamxoyjeojwbyc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_fk-EnvdNJKPgqRmVl-bz1g_jdukPtn2';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fk-EnvdNJKPgqRmVl-bz1g_jdukPtn2';
 
 let _client = null;
 function getClient() {
