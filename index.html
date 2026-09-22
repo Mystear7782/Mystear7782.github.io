@@ -2,13 +2,24 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<!-- TODO: Supabaseプロジェクト作成後、connect-srcの <project-ref> を実際の値に置き換えてください -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+  script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data:;
-  connect-src 'self'">
+  connect-src 'self' https://<project-ref>.supabase.co">
+<style>
+  #auth-gate{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+    background:var(--bg,#0b0d12);padding:16px}
+  #auth-gate .auth-box{width:100%;max-width:340px}
+  #auth-gate .auth-logo{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+  #auth-gate .auth-logo span{opacity:.65;font-weight:400}
+  #auth-gate .auth-sub{text-align:center;font-size:13px;opacity:.65;margin-bottom:20px}
+  #auth-gate .form-group{margin-bottom:12px}
+  #auth-gate .auth-error{color:#f87171;font-size:12px;margin-bottom:12px;text-align:center}
+</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,6 +32,21 @@
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+<!-- AUTH GATE: Supabaseログイン。未ログイン時はこの画面のみ表示し、本体(#app)は隠す -->
+<div id="auth-gate" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">Workout<span>tracker</span></div>
+    <div class="auth-sub">ログインしてください</div>
+    <div class="form-group">
+      <input type="email" class="form-input" id="auth-email" placeholder="メールアドレス" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <input type="password" class="form-input" id="auth-password" placeholder="パスワード" autocomplete="current-password">
+    </div>
+    <div id="auth-error" class="auth-error" style="display:none"></div>
+    <button class="btn-primary" id="auth-login-btn" onclick="handleLogin()">ログイン</button>
+  </div>
+</div>
 <div id="overlay" onclick="closeSidebar()"></div>
 <div id="sidebar">
   <div class="sb-head">
@@ -303,6 +329,25 @@
           <div class="csv-format-code">session_idは空欄でOK。空欄の場合、同じ日付・同じメニューの行は自動的に1セッションにまとめられます。</div>
         </div>
       </div>
+
+      <!-- 移行用（一時的）: Supabase移行のためメニュー一覧の生データを表示。移行完了後に削除予定 -->
+      <div class="csv-section">
+        <div class="csv-section-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg>
+          移行用: メニューデータを表示（一時的）
+        </div>
+        <div class="csv-notice">
+          Supabase移行のための一時的な機能です。タップするとこの端末に保存されているメニュー一覧の生データが表示されます。全選択してコピーしてください。
+        </div>
+        <button class="csv-btn" onclick="showMenusDebug()">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
+          <div class="csv-btn-body">
+            <div class="csv-btn-label">メニュー一覧データを表示</div>
+            <div class="csv-btn-sub">gl_menusの内容をこの画面に表示します</div>
+          </div>
+        </button>
+        <textarea id="menus-debug-out" readonly style="display:none;width:100%;height:200px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
+      </div>
     </div>
 
   </div>
@@ -371,6 +416,11 @@
   </div>
 </div>
 
+<!-- Supabase JS SDK（UMD, SRI付き。Chart.jsと同様cdnjs/jsdelivrから読み込み。バージョンを上げる際はintegrityハッシュも更新すること） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
+  integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
+  crossorigin="anonymous"></script>
+<script src="./supabase-client.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

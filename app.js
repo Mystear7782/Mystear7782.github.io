@@ -145,18 +145,28 @@ function validateAdd() {
   const name=document.getElementById('inp-name').value.trim();
   document.getElementById('btn-add').disabled=!(cat&&name&&selTypeVal);
 }
-function addMenu() {
+async function addMenu() {
   const cat=document.getElementById('sel-cat').value;
   const name=document.getElementById('inp-name').value.trim();
   if(!cat||!name||!selTypeVal) return;
   if(S.menus.find(m=>m.name===name&&m.category===cat&&!m.archived)){toast('同じ部位に同名のメニューがあります');return;}
-  S.menus.push({id:'menu_'+Date.now(),name,category:cat,type:selTypeVal,archived:false});
+  const menu = {id:'menu_'+Date.now(),name,category:cat,type:selTypeVal,archived:false};
+  const btn = document.getElementById('btn-add');
+  btn.disabled = true;
+  try {
+    await SupaClient.exercises.insert(menu);
+  } catch(e) {
+    toast('メニューの追加に失敗しました（通信を確認してください）');
+    btn.disabled = false;
+    return;
+  }
+  S.menus.push(menu);
   persist(); toast(`「${name}」を追加しました`);
   document.getElementById('sel-cat').value='';
   document.getElementById('inp-name').value='';
   document.getElementById('type-section').style.display='block';
   document.querySelectorAll('.type-chip').forEach(c=>c.classList.remove('sel'));
-  selTypeVal=null; document.getElementById('btn-add').disabled=true;
+  selTypeVal=null; btn.disabled=true;
 }
 
 // ===== MENU LIST =====
@@ -286,12 +296,17 @@ function onRowPointerDown(e, el){
   document.addEventListener('pointercancel', onUp);
 }
 
-function commitMenuOrder(cat, listEl){
+async function commitMenuOrder(cat, listEl){
   const ids = [...listEl.querySelectorAll('.menu-row')].map(r=>r.dataset.id);
   const catMenusInNewOrder = ids.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
   let idx=0;
   S.menus = S.menus.map(m => (m.category===cat && ids.includes(m.id)) ? catMenusInNewOrder[idx++] : m);
   persist();
+  try {
+    await SupaClient.exercises.reorderCategory(cat, ids);
+  } catch(e) {
+    toast('並び順の保存に失敗しました（通信を確認してください）');
+  }
 }
 
 function openDetail(id, fromPage){
@@ -409,18 +424,27 @@ function renderDetail(){
 }
 
 // ④ アーカイブ・削除
-function archiveMenu(){
+async function archiveMenu(){
   if(!confirm(`「${S.menu.name}」をアーカイブしますか？\n一覧には表示されなくなりますが記録は保持されます。`)) return;
+  const id = S.menu.id;
   S.menu.archived=true; persist(); toast('アーカイブしました'); renderDetail();
+  try { await SupaClient.exercises.setArchived(id, true); }
+  catch(e) { toast('サーバーへの反映に失敗しました（通信を確認してください）'); }
 }
-function unarchiveMenu(){
+async function unarchiveMenu(){
+  const id = S.menu.id;
   S.menu.archived=false; persist(); toast('アーカイブを解除しました'); renderDetail();
+  try { await SupaClient.exercises.setArchived(id, false); }
+  catch(e) { toast('サーバーへの反映に失敗しました（通信を確認してください）'); }
 }
-function deleteMenu(){
+async function deleteMenu(){
   if(!confirm(`「${S.menu.name}」を完全に削除しますか？\n⚠️ この操作は取り消せません。全記録も削除されます。`)) return;
-  S.menus=S.menus.filter(m=>m.id!==S.menu.id);
-  delete S.sessions[S.menu.id];
+  const id = S.menu.id;
+  S.menus=S.menus.filter(m=>m.id!==id);
+  delete S.sessions[id];
   persist(); toast('削除しました'); S.menu=null; go('menu-list');
+  try { await SupaClient.exercises.remove(id); }
+  catch(e) { toast('サーバーからの削除に失敗しました（通信を確認してください）'); }
 }
 
 // ===== EDIT MENU =====
@@ -453,7 +477,7 @@ function selEditType(el) {
   el.classList.add('sel');
   editMenuTypeVal = el.dataset.type;
 }
-function saveEditMenu() {
+async function saveEditMenu() {
   const name = document.getElementById('edit-inp-name').value.trim();
   const cat = document.getElementById('edit-sel-cat').value;
   if(!name) { toast('メニュー名を入力してください'); return; }
@@ -461,6 +485,7 @@ function saveEditMenu() {
   if(S.menus.find(m=>m.id!==S.menu.id&&m.name===name&&m.category===cat&&!m.archived)) {
     toast('同じ部位に同名のメニューがあります'); return;
   }
+  const id = S.menu.id;
   S.menu.name = name;
   S.menu.category = cat;
   S.menu.type = editMenuTypeVal;
@@ -468,6 +493,8 @@ function saveEditMenu() {
   closeEditMenu();
   toast(`「${name}」を更新しました`);
   renderDetail();
+  try { await SupaClient.exercises.update(id, {name, category: cat, type: editMenuTypeVal}); }
+  catch(e) { toast('サーバーへの反映に失敗しました（通信を確認してください）'); }
 }
 function closeEditMenu() {
   document.getElementById('edit-menu-modal').classList.remove('show');
@@ -1479,6 +1506,8 @@ function importCSV(input) {
         if (!menuName||!category||!date) continue;
 
         // ③ メニュー存在確認・アプリ未登録なら自動新規登録
+        // NOTE: 段階移行フェーズ1時点ではCSV画面は未移行のため、ここで新規登録されるメニューは
+        // ローカル(localStorage)のみに保存されSupabaseには同期されない。CSV画面の移行時に対応予定。
         let menu = S.menus.find(m=>m.name===menuName&&m.category===category);
         if (!menu) {
           const type = isCardio ? '有酸素運動' : (col('type')>=0 ? r[col('type')]?.trim()||'マシン' : 'マシン');
@@ -1541,6 +1570,18 @@ function importCSV(input) {
   reader.readAsText(file, 'UTF-8');
 }
 
+// ===== 移行用（一時的）: gl_menusの生データを画面に表示 =====
+// Supabase移行のための一時的な関数。既存メニューを同じIDのままexercisesテーブルへ
+// 投入するために使う。移行完了後、この関数とCSV画面の該当ブロックは削除して良い。
+function showMenusDebug() {
+  const el = document.getElementById('menus-debug-out');
+  if (!el) return;
+  el.value = localStorage.getItem('gl_menus') || '[]';
+  el.style.display = 'block';
+  el.focus();
+  el.select();
+}
+
 function showImportResult(type, msg) {
   const el = document.getElementById('import-result');
   if (!el) return;
@@ -1552,5 +1593,67 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 
-// 初期表示：メニュー一覧
-renderList();
+// ===== 認証 & 起動（Supabase移行: メニュー管理フェーズ） =====
+function showAuthGate() {
+  const gate = document.getElementById('auth-gate');
+  const app = document.getElementById('app');
+  if (gate) gate.style.display = 'flex';
+  if (app) app.style.display = 'none';
+}
+function hideAuthGate() {
+  const gate = document.getElementById('auth-gate');
+  const app = document.getElementById('app');
+  if (gate) gate.style.display = 'none';
+  if (app) app.style.display = '';
+}
+function setAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+async function handleLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if (!email || !password) { setAuthError('メールアドレスとパスワードを入力してください'); return; }
+  const btn = document.getElementById('auth-login-btn');
+  btn.disabled = true;
+  setAuthError('');
+  try {
+    await SupaClient.auth.signInWithPassword(email, password);
+    hideAuthGate();
+    await loadExercisesFromSupabase();
+    renderList();
+  } catch (e) {
+    setAuthError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+  } finally {
+    btn.disabled = false;
+  }
+}
+// exercises(メニュー)をSupabaseから取得しS.menusを置き換える。
+// 失敗時はローカルキャッシュ(gl_menus、起動時にSから読み込み済み)をそのまま使い続ける。
+async function loadExercisesFromSupabase() {
+  try {
+    const rows = await SupaClient.exercises.list();
+    S.menus = rows.map(r => ({ id: r.id, name: r.name, category: r.category, type: r.type, archived: r.archived }));
+    persist();
+  } catch (e) {
+    toast('メニューの取得に失敗しました（オフラインの可能性があります。ローカルの保存内容を表示しています）');
+  }
+}
+async function boot() {
+  let session = null;
+  try {
+    session = await SupaClient.auth.getSession();
+  } catch (e) {
+    // ネットワーク不通・未設定など。ログイン画面を表示して再試行させる
+  }
+  if (!session) {
+    showAuthGate();
+    return;
+  }
+  hideAuthGate();
+  await loadExercisesFromSupabase();
+  renderList();
+}
+boot();
