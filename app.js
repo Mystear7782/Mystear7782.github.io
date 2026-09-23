@@ -1627,6 +1627,14 @@ async function testSupabaseExercises() {
   } catch (e) {
     out.dbAuthUidException = (e && e.message) ? e.message : String(e);
   }
+  // RLS経由の直接カウント（要: debug_exercises_count()関数をSQL Editorで作成済みであること）
+  try {
+    const { data, error } = await getClient().rpc('debug_exercises_count');
+    out.debugCount = data;
+    out.debugCountError = error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null;
+  } catch (e) {
+    out.debugCountException = (e && e.message) ? e.message : String(e);
+  }
   el.value = JSON.stringify(out, null, 2);
   el.focus();
   el.select();
