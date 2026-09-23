@@ -113,6 +113,10 @@ const SupaBodyWeight = {
     if (error) throw error;
     return data;
   },
+  async update(id, patch) {
+    const { error } = await getClient().from('body_weight_logs').update(patch).eq('id', id);
+    if (error) throw error;
+  },
   async remove(id) {
     const { error } = await getClient().from('body_weight_logs').delete().eq('id', id);
     if (error) throw error;
@@ -141,6 +145,10 @@ const SupaMeals = {
       .single();
     if (error) throw error;
     return data;
+  },
+  async update(id, patch) {
+    const { error } = await getClient().from('meal_logs').update(patch).eq('id', id);
+    if (error) throw error;
   },
   async remove(id) {
     const { error } = await getClient().from('meal_logs').delete().eq('id', id);
