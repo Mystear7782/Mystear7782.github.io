@@ -80,6 +80,10 @@
     <div class="sb-item" data-page="meal" onclick="go('meal')">
       <span class="sb-icon">🍽️</span>食事記録
     </div>
+    <div class="sb-sec">その他</div>
+    <div class="sb-item" data-page="config" onclick="go('config')">
+      <span class="sb-icon">⚙️</span>設定
+    </div>
   </nav>
 </div>
 
@@ -224,7 +228,14 @@
             <span class="big-unit">kg</span>
           </div>
         </div>
-        <button class="btn-primary" onclick="addBodyWeight()">記録する</button>
+        <button class="btn-primary" id="weight-submit-btn" onclick="addBodyWeight()">記録する</button>
+        <button class="btn-mini" id="weight-cancel-btn" style="display:none;margin-top:8px;width:100%" onclick="cancelEditWeight()">キャンセル</button>
+      </div>
+      <div class="chart-card" id="weight-chart-card" style="display:none">
+        <div class="chart-head">
+          <div class="chart-title">体重推移 (kg)</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
       </div>
       <div id="weight-list-body"></div>
     </div>
@@ -277,7 +288,8 @@
           </div>
         </div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:14px">推定カロリー: <span id="meal-cal-preview">0</span> kcal</div>
-        <button class="btn-primary" onclick="addMealLog()">記録する</button>
+        <button class="btn-primary" id="meal-submit-btn" onclick="addMealLog()">記録する</button>
+        <button class="btn-mini" id="meal-cancel-btn" style="display:none;margin-top:8px;width:100%" onclick="cancelEditMeal()">キャンセル</button>
       </div>
       <div id="meal-list-body"></div>
     </div>
@@ -402,16 +414,29 @@
         </div>
         <div class="csv-format-block">
           <div class="csv-format-title">筋トレ用（エクスポート列）</div>
-          <div class="csv-format-code">menu_name, category, type, date, session_id, set_no, weight_kg, reps, estimated_1rm_kg, volume_kg</div>
+          <div class="csv-format-code">menu_name, category, type, date, session_id, session_time, set_no, weight_kg, reps, estimated_1rm_kg, volume_kg</div>
         </div>
         <div class="csv-format-block">
           <div class="csv-format-title">有酸素運動用（エクスポート列）</div>
-          <div class="csv-format-code">menu_name, category, date, session_id, time_min, dist_km, cal_kcal, hr_bpm, max_spd_kmh, avg_spd_kmh</div>
+          <div class="csv-format-code">menu_name, category, date, session_id, session_time, time_min, dist_km, cal_kcal, hr_bpm, max_spd_kmh, avg_spd_kmh</div>
+        </div>
+        <div class="csv-format-block">
+          <div class="csv-format-title">session_timeについて</div>
+          <div class="csv-format-code">セッションの記録時刻(HH:MM)。旧バージョンのCSV（この列がないもの）をインポートした場合は00:00として扱われます。</div>
         </div>
         <div class="csv-format-block">
           <div class="csv-format-title">手入力インポート時のsession_idの扱い</div>
           <div class="csv-format-code">session_idは空欄でOK。空欄の場合、同じ日付・同じメニューの行は自動的に1セッションにまとめられます。</div>
         </div>
+      </div>
+
+    </div>
+
+    <!-- CONFIG -->
+    <div class="page" id="page-config">
+      <div class="sec-head">
+        <div class="sec-title">設定</div>
+        <div class="sec-sub">移行用・デバッグ用のツールをまとめています</div>
       </div>
 
       <!-- 移行用（一時的）: Supabase移行のためメニュー一覧の生データを表示。移行完了後に削除予定 -->

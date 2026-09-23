@@ -51,6 +51,10 @@ const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+};
 const fmtDate = d => {
   if (!d) return '';
   const [y,m,day] = d.split('-');
@@ -96,6 +100,7 @@ function menuStats(menuId) {
 }
 
 // ===== 体重ログ（Supabase直接、localStorage非経由） =====
+let editingWeightId = null; // 編集中の体重ログid（新規登録時はnull）
 async function loadBodyWeightLogs() {
   try {
     S.bodyWeights = await SupaClient.bodyWeight.list();
@@ -104,12 +109,68 @@ async function loadBodyWeightLogs() {
   }
 }
 async function initWeightPage() {
-  document.getElementById('weight-inp-date').value = today();
-  document.getElementById('weight-inp-value').value = '';
+  cancelEditWeight();
   document.getElementById('weight-list-body').innerHTML =
     '<div class="empty-state"><div class="empty-title">読み込み中...</div></div>';
   await loadBodyWeightLogs();
   renderWeightList();
+  renderWeightChart();
+}
+let weightChart = null;
+function renderWeightChart() {
+  const card = document.getElementById('weight-chart-card');
+  if (!card) return;
+  // RPCの取得順は新しい順(log_date desc)のため、グラフ用に古い順へ並び替える
+  const sorted = [...S.bodyWeights].sort((a, b) => {
+    if (a.log_date !== b.log_date) return a.log_date < b.log_date ? -1 : 1;
+    return (a.created_at || '') < (b.created_at || '') ? -1 : 1;
+  });
+  if (sorted.length < 2) {
+    // 1件以下では推移が描けないため非表示（記録を増やすと自動的に表示される）
+    card.style.display = 'none';
+    if (weightChart) { weightChart.destroy(); weightChart = null; }
+    return;
+  }
+  card.style.display = '';
+  const labels = sorted.map(w => fmtDate(w.log_date).replace(/\d{4}年/, ''));
+  const data = sorted.map(w => +w.weight_kg);
+  waitForChartJs(() => drawWeightChart(labels, data));
+}
+function drawWeightChart(labels, data) {
+  const canvas = document.getElementById('chart-weight');
+  if (!canvas) return;
+  if (weightChart) { weightChart.destroy(); weightChart = null; }
+  const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const accentColor = isDark ? '#38bdf8' : '#0ea5e9';
+  const gridColor   = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+  const tickColor   = isDark ? '#6b7280' : '#9ca3af';
+  weightChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '体重 (kg)',
+        data,
+        borderColor: accentColor,
+        backgroundColor: isDark ? 'rgba(56,189,248,.1)' : 'rgba(14,165,233,.08)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ` ${ctx.parsed.y} kg`,
+      } } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 }, maxRotation: 45 } },
+        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } }, beginAtZero: false },
+      },
+    },
+  });
 }
 function renderWeightList() {
   const el = document.getElementById('weight-list-body');
@@ -127,9 +188,27 @@ function renderWeightList() {
         </div>
       </div>
       <div class="menu-actions" style="margin-top:10px;margin-bottom:0">
+        <button class="btn-mini" onclick="editBodyWeight('${w.id}')">編集</button>
         <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="deleteBodyWeight('${w.id}')">削除</button>
       </div>
     </div>`).join('');
+}
+function editBodyWeight(id) {
+  const w = S.bodyWeights.find(x => x.id === id);
+  if (!w) return;
+  editingWeightId = id;
+  document.getElementById('weight-inp-date').value = w.log_date;
+  document.getElementById('weight-inp-value').value = w.weight_kg;
+  document.getElementById('weight-submit-btn').textContent = '更新する';
+  document.getElementById('weight-cancel-btn').style.display = '';
+  document.getElementById('weight-inp-value').focus();
+}
+function cancelEditWeight() {
+  editingWeightId = null;
+  document.getElementById('weight-inp-date').value = today();
+  document.getElementById('weight-inp-value').value = '';
+  document.getElementById('weight-submit-btn').textContent = '記録する';
+  document.getElementById('weight-cancel-btn').style.display = 'none';
 }
 async function addBodyWeight() {
   const date = document.getElementById('weight-inp-date').value;
@@ -138,22 +217,30 @@ async function addBodyWeight() {
   if (!date) { toast('日付を入力してください'); return; }
   if (raw === '' || isNaN(weight) || weight <= 0) { toast('体重を正しく入力してください'); return; }
   try {
-    await SupaClient.bodyWeight.insert({ date, weight });
-    document.getElementById('weight-inp-value').value = '';
-    toast('記録しました');
+    if (editingWeightId) {
+      await SupaClient.bodyWeight.update(editingWeightId, { log_date: date, weight_kg: weight });
+      toast('更新しました');
+    } else {
+      await SupaClient.bodyWeight.insert({ date, weight });
+      toast('記録しました');
+    }
+    cancelEditWeight();
     await loadBodyWeightLogs();
     renderWeightList();
+    renderWeightChart();
   } catch (e) {
-    toast('記録に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
   }
 }
 async function deleteBodyWeight(id) {
   if (!confirm('この体重記録を削除しますか？')) return;
   try {
     await SupaClient.bodyWeight.remove(id);
+    if (id === editingWeightId) cancelEditWeight();
     toast('削除しました');
     await loadBodyWeightLogs();
     renderWeightList();
+    renderWeightChart();
   } catch (e) {
     toast('削除に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
   }
@@ -162,6 +249,7 @@ async function deleteBodyWeight(id) {
 // ===== 食事記録（Supabase直接、localStorage非経由） =====
 // カロリーはDB側でP4/F9/C4の係数からGENERATEDカラムとして自動計算される。
 // このプレビュー計算は入力時の目安表示用（保存前の暫定値、実際の保存値はDBの計算結果）。
+let editingMealId = null; // 編集中の食事記録id（新規登録時はnull）
 function calcMealCalories(p, f, c) {
   return +((p * 4) + (f * 9) + (c * 4)).toFixed(1);
 }
@@ -179,12 +267,7 @@ async function loadMealLogs() {
   }
 }
 async function initMealPage() {
-  document.getElementById('meal-inp-date').value = today();
-  document.getElementById('meal-inp-type').value = '朝';
-  document.getElementById('meal-inp-protein').value = '';
-  document.getElementById('meal-inp-fat').value = '';
-  document.getElementById('meal-inp-carb').value = '';
-  updateMealCalPreview();
+  cancelEditMeal();
   document.getElementById('meal-list-body').innerHTML =
     '<div class="empty-state"><div class="empty-title">読み込み中...</div></div>';
   await loadMealLogs();
@@ -214,11 +297,36 @@ function renderMealList() {
           </div>
         </div>
         <div class="menu-actions" style="margin-top:10px;margin-bottom:0">
+          <button class="btn-mini" onclick="editMealLog('${m.id}')">編集</button>
           <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="deleteMealLog('${m.id}')">削除</button>
         </div>
       </div>`).join('');
     return `<div class="sec-title" style="font-size:13px;margin:16px 0 8px">${fmtDate(date)}<span style="color:var(--text3);font-weight:400;font-size:12px"> ・ 合計 ${totalCal.toFixed(0)} kcal</span></div>${rows}`;
   }).join('');
+}
+function editMealLog(id) {
+  const m = S.mealLogs.find(x => x.id === id);
+  if (!m) return;
+  editingMealId = id;
+  document.getElementById('meal-inp-date').value = m.log_date;
+  document.getElementById('meal-inp-type').value = m.meal_type;
+  document.getElementById('meal-inp-protein').value = m.protein_g;
+  document.getElementById('meal-inp-fat').value = m.fat_g;
+  document.getElementById('meal-inp-carb').value = m.carb_g;
+  updateMealCalPreview();
+  document.getElementById('meal-submit-btn').textContent = '更新する';
+  document.getElementById('meal-cancel-btn').style.display = '';
+}
+function cancelEditMeal() {
+  editingMealId = null;
+  document.getElementById('meal-inp-date').value = today();
+  document.getElementById('meal-inp-type').value = '朝';
+  document.getElementById('meal-inp-protein').value = '';
+  document.getElementById('meal-inp-fat').value = '';
+  document.getElementById('meal-inp-carb').value = '';
+  updateMealCalPreview();
+  document.getElementById('meal-submit-btn').textContent = '記録する';
+  document.getElementById('meal-cancel-btn').style.display = 'none';
 }
 async function addMealLog() {
   const date = document.getElementById('meal-inp-date').value;
@@ -229,22 +337,27 @@ async function addMealLog() {
   if (!date) { toast('日付を入力してください'); return; }
   if (protein === 0 && fat === 0 && carb === 0) { toast('たんぱく質・脂質・炭水化物のいずれかを入力してください'); return; }
   try {
-    await SupaClient.meals.insert({ date, mealType, protein, fat, carb });
-    document.getElementById('meal-inp-protein').value = '';
-    document.getElementById('meal-inp-fat').value = '';
-    document.getElementById('meal-inp-carb').value = '';
-    updateMealCalPreview();
-    toast('記録しました');
+    if (editingMealId) {
+      await SupaClient.meals.update(editingMealId, {
+        log_date: date, meal_type: mealType, protein_g: protein, fat_g: fat, carb_g: carb,
+      });
+      toast('更新しました');
+    } else {
+      await SupaClient.meals.insert({ date, mealType, protein, fat, carb });
+      toast('記録しました');
+    }
+    cancelEditMeal();
     await loadMealLogs();
     renderMealList();
   } catch (e) {
-    toast('記録に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
   }
 }
 async function deleteMealLog(id) {
   if (!confirm('この食事記録を削除しますか？')) return;
   try {
     await SupaClient.meals.remove(id);
+    if (id === editingMealId) cancelEditMeal();
     toast('削除しました');
     await loadMealLogs();
     renderMealList();
@@ -270,7 +383,7 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録','config':'設定'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -817,9 +930,10 @@ function openSetEdit(sid){
     const newId='sess_'+Date.now();
     if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
     // 有酸素は cardio オブジェクト、筋トレは sets 配列で初期化
+    // time: 新規セッション作成時点の現在時刻を自動セット（手動で変更も可能）
     const init = isCardioMenu(S.menu)
-      ? {date:today(), time:'00:00', cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
-      : {date:today(), time:'00:00', sets:[]};
+      ? {date:today(), time:nowTime(), cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
+      : {date:today(), time:nowTime(), sets:[]};
     S.sessions[S.menu.id][newId]=init;
     persist();
     S.sessionId=newId;
@@ -1552,8 +1666,10 @@ function downloadCSV(filename, content) {
 }
 
 // ① 筋トレCSV行生成（推定1RM・ボリューム列追加）
+// session_time列: workout_sessions.session_time（DB設計）に対応する時刻(HH:MM)。
+// 以前は未出力だったため、エクスポート→インポートを往復すると時刻が00:00にリセットされていた（③で修正）。
 function buildStrengthRows(menus) {
-  const rows = ['menu_name,category,type,date,session_id,set_no,weight_kg,reps,estimated_1rm_kg,volume_kg'];
+  const rows = ['menu_name,category,type,date,session_id,session_time,set_no,weight_kg,reps,estimated_1rm_kg,volume_kg'];
   for (const m of menus) {
     const sessMap = S.sessions[m.id] || {};
     const sessList = Object.entries(sessMap)
@@ -1565,7 +1681,7 @@ function buildStrengthRows(menus) {
         const vol  = +(s.w * s.r).toFixed(1);
         rows.push([
           `"${m.name}"`, m.category, m.type,
-          sess.date, sess.id, i+1, s.w, s.r, e1rm, vol
+          sess.date, sess.id, sess.time || '00:00', i+1, s.w, s.r, e1rm, vol
         ].join(','));
       });
     }
@@ -1573,9 +1689,10 @@ function buildStrengthRows(menus) {
   return rows.join('\r\n');
 }
 
-// 有酸素CSVの行生成（変更なし）
+// 有酸素CSVの行生成
+// session_time列: strength同様、workout_sessions.session_timeに対応（③で追加）。
 function buildCardioRows(menus) {
-  const rows = ['menu_name,category,date,session_id,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh'];
+  const rows = ['menu_name,category,date,session_id,session_time,time_min,dist_km,cal_kcal,hr_bpm,max_spd_kmh,avg_spd_kmh'];
   for (const m of menus) {
     const sessMap = S.sessions[m.id] || {};
     const sessList = Object.entries(sessMap)
@@ -1585,7 +1702,7 @@ function buildCardioRows(menus) {
       const c = sess.cardio || {};
       rows.push([
         `"${m.name}"`, m.category,
-        sess.date, sess.id,
+        sess.date, sess.id, sess.time || '00:00',
         c.time??'', c.dist??'', c.cal??'', c.hr??'',
         c.maxSpd??'', c.avgSpd??''
       ].join(','));
@@ -1665,6 +1782,9 @@ function importCSV(input) {
         const category = r[col('category')]?.trim();
         const date     = r[col('date')]?.trim();
         const rawSessId = col('session_id') >= 0 ? r[col('session_id')]?.trim() : '';
+        // ③ session_time列（workout_sessions.session_time相当）。旧形式のCSV（列なし）はundefinedのまま
+        // → 後続のmigrateTime()等で'00:00'が補完される。
+        const sessionTime = col('session_time') >= 0 && r[col('session_time')] ? r[col('session_time')].trim() : undefined;
         if (!menuName||!category||!date) continue;
 
         // ③ メニュー存在確認・アプリ未登録なら自動新規登録
@@ -1695,6 +1815,7 @@ function importCSV(input) {
           if (S.sessions[menu.id][sessId]) { skipped++; continue; }
           S.sessions[menu.id][sessId] = {
             date,
+            time: sessionTime,
             cardio: {
               time:   r[col('time_min')]!==''    ? +r[col('time_min')]    : null,
               dist:   r[col('dist_km')]!==''     ? +r[col('dist_km')]     : null,
@@ -1708,7 +1829,7 @@ function importCSV(input) {
         } else {
           // 筋トレ：同sessIdで複数行 → setsに追加（重複sessIdはINSERT継続）
           if (!S.sessions[menu.id][sessId]) {
-            S.sessions[menu.id][sessId] = {date, sets:[]};
+            S.sessions[menu.id][sessId] = {date, time: sessionTime, sets:[]};
           }
           const w   = parseFloat(r[col('weight_kg')]);
           const rep = parseInt(r[col('reps')]);
