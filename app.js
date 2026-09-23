@@ -1603,6 +1603,7 @@ async function testSupabaseExercises() {
     out.hasSession = !!session;
     out.currentSessionUserId = session ? session.user.id : null;
     out.currentSessionEmail = session ? session.user.email : null;
+    out.accessTokenPreview = session && session.access_token ? session.access_token.slice(0, 24) + '...' : null;
   } catch (e) {
     out.sessionError = (e && e.message) ? e.message : String(e);
   }
@@ -1617,6 +1618,14 @@ async function testSupabaseExercises() {
       details: e && e.details,
       hint: e && e.hint,
     };
+  }
+  // DBの auth.uid() が実際に何を返しているかを直接確認する（要: debug_whoami()関数をSQL Editorで作成済みであること）
+  try {
+    const { data, error } = await getClient().rpc('debug_whoami');
+    out.dbAuthUid = data;
+    out.dbAuthUidError = error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null;
+  } catch (e) {
+    out.dbAuthUidException = (e && e.message) ? e.message : String(e);
   }
   el.value = JSON.stringify(out, null, 2);
   el.focus();
