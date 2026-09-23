@@ -1640,6 +1640,38 @@ async function testSupabaseExercises() {
   el.select();
 }
 
+// gl_sessions復旧用（一時的）: 9/12バックアップCSVから再構築した記録(recovered_sessions_2026-09-12.json)を
+// 同じオリジンから取得し、現在のgl_sessionsにマージする。既存のmenuId/sessionIdの組み合わせが
+// 既にある場合はそちらを優先し、上書きしない（安全のため）。
+async function importRecoveredSessions() {
+  const el = document.getElementById('import-sessions-out');
+  if (el) { el.style.display = 'block'; el.value = '実行中...'; }
+  try {
+    const res = await fetch('./recovered_sessions_2026-09-12.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const recovered = await res.json();
+    let added = 0, skipped = 0, menuCount = 0;
+    for (const [menuId, sessMap] of Object.entries(recovered)) {
+      menuCount++;
+      if (!S.sessions[menuId]) S.sessions[menuId] = {};
+      for (const [sid, sess] of Object.entries(sessMap)) {
+        if (S.sessions[menuId][sid]) { skipped++; continue; }
+        S.sessions[menuId][sid] = sess;
+        added++;
+      }
+    }
+    persist();
+    const msg = `復旧インポート完了: ${menuCount}メニュー中 ${added}件のセッションを追加しました（既存のため${skipped}件はスキップ）`;
+    if (el) el.value = msg;
+    toast(msg);
+    renderList();
+  } catch (e) {
+    const msg = '復旧インポートに失敗しました: ' + ((e && e.message) ? e.message : String(e));
+    if (el) el.value = msg;
+    toast(msg);
+  }
+}
+
 function showImportResult(type, msg) {
   const el = document.getElementById('import-result');
   if (!el) return;
