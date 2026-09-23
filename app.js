@@ -6,6 +6,8 @@ const S = {
   menuSets: JSON.parse(localStorage.getItem('gl_menusets') || '[]'),
   menu: null, menuSet: null, sessionId: null, editingSetIdx: null, showArchived: false,
   fromCalendar: false, // カレンダーから遷移したかどうか
+  bodyWeights: [], // 体重ログ(Supabase body_weight_logsのみ。localStorageには保存しない)
+  mealLogs: [],    // 食事記録(Supabase meal_logsのみ。localStorageには保存しない)
 };
 
 const persist = () => {
@@ -93,6 +95,164 @@ function menuStats(menuId) {
   return {maxOrm, maxVol, lastDate, isCardio:false};
 }
 
+// ===== 体重ログ（Supabase直接、localStorage非経由） =====
+async function loadBodyWeightLogs() {
+  try {
+    S.bodyWeights = await SupaClient.bodyWeight.list();
+  } catch (e) {
+    toast('体重ログの取得に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+async function initWeightPage() {
+  document.getElementById('weight-inp-date').value = today();
+  document.getElementById('weight-inp-value').value = '';
+  document.getElementById('weight-list-body').innerHTML =
+    '<div class="empty-state"><div class="empty-title">読み込み中...</div></div>';
+  await loadBodyWeightLogs();
+  renderWeightList();
+}
+function renderWeightList() {
+  const el = document.getElementById('weight-list-body');
+  if (!el) return;
+  if (!S.bodyWeights.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">記録がありません</div><div class="empty-desc">上のフォームから体重を記録してください</div></div>`;
+    return;
+  }
+  el.innerHTML = S.bodyWeights.map(w => `
+    <div class="prog-card">
+      <div class="prog-card-head">
+        <div>
+          <div class="prog-card-name">${w.weight_kg} kg</div>
+          <div class="prog-card-meta">${fmtDate(w.log_date)}</div>
+        </div>
+      </div>
+      <div class="menu-actions" style="margin-top:10px;margin-bottom:0">
+        <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="deleteBodyWeight('${w.id}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+async function addBodyWeight() {
+  const date = document.getElementById('weight-inp-date').value;
+  const raw = document.getElementById('weight-inp-value').value;
+  const weight = parseFloat(raw);
+  if (!date) { toast('日付を入力してください'); return; }
+  if (raw === '' || isNaN(weight) || weight <= 0) { toast('体重を正しく入力してください'); return; }
+  try {
+    await SupaClient.bodyWeight.insert({ date, weight });
+    document.getElementById('weight-inp-value').value = '';
+    toast('記録しました');
+    await loadBodyWeightLogs();
+    renderWeightList();
+  } catch (e) {
+    toast('記録に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+async function deleteBodyWeight(id) {
+  if (!confirm('この体重記録を削除しますか？')) return;
+  try {
+    await SupaClient.bodyWeight.remove(id);
+    toast('削除しました');
+    await loadBodyWeightLogs();
+    renderWeightList();
+  } catch (e) {
+    toast('削除に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+
+// ===== 食事記録（Supabase直接、localStorage非経由） =====
+// カロリーはDB側でP4/F9/C4の係数からGENERATEDカラムとして自動計算される。
+// このプレビュー計算は入力時の目安表示用（保存前の暫定値、実際の保存値はDBの計算結果）。
+function calcMealCalories(p, f, c) {
+  return +((p * 4) + (f * 9) + (c * 4)).toFixed(1);
+}
+function updateMealCalPreview() {
+  const p = parseFloat(document.getElementById('meal-inp-protein').value) || 0;
+  const f = parseFloat(document.getElementById('meal-inp-fat').value) || 0;
+  const c = parseFloat(document.getElementById('meal-inp-carb').value) || 0;
+  document.getElementById('meal-cal-preview').textContent = calcMealCalories(p, f, c);
+}
+async function loadMealLogs() {
+  try {
+    S.mealLogs = await SupaClient.meals.list();
+  } catch (e) {
+    toast('食事記録の取得に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+async function initMealPage() {
+  document.getElementById('meal-inp-date').value = today();
+  document.getElementById('meal-inp-type').value = '朝';
+  document.getElementById('meal-inp-protein').value = '';
+  document.getElementById('meal-inp-fat').value = '';
+  document.getElementById('meal-inp-carb').value = '';
+  updateMealCalPreview();
+  document.getElementById('meal-list-body').innerHTML =
+    '<div class="empty-state"><div class="empty-title">読み込み中...</div></div>';
+  await loadMealLogs();
+  renderMealList();
+}
+function renderMealList() {
+  const el = document.getElementById('meal-list-body');
+  if (!el) return;
+  if (!S.mealLogs.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽️</div><div class="empty-title">記録がありません</div><div class="empty-desc">上のフォームから食事を記録してください</div></div>`;
+    return;
+  }
+  const byDate = {};
+  for (const m of S.mealLogs) {
+    (byDate[m.log_date] = byDate[m.log_date] || []).push(m);
+  }
+  const dates = Object.keys(byDate).sort((a, b) => a < b ? 1 : -1);
+  el.innerHTML = dates.map(date => {
+    const items = byDate[date];
+    const totalCal = items.reduce((s, m) => s + (+m.calories_kcal || 0), 0);
+    const rows = items.map(m => `
+      <div class="prog-card">
+        <div class="prog-card-head">
+          <div>
+            <div class="prog-card-name">${esc(m.meal_type)} ・ ${(+m.calories_kcal).toFixed(0)} kcal</div>
+            <div class="prog-card-meta">P ${m.protein_g}g ・ F ${m.fat_g}g ・ C ${m.carb_g}g</div>
+          </div>
+        </div>
+        <div class="menu-actions" style="margin-top:10px;margin-bottom:0">
+          <button class="btn-mini" style="border-color:var(--red);color:var(--red-t)" onclick="deleteMealLog('${m.id}')">削除</button>
+        </div>
+      </div>`).join('');
+    return `<div class="sec-title" style="font-size:13px;margin:16px 0 8px">${fmtDate(date)}<span style="color:var(--text3);font-weight:400;font-size:12px"> ・ 合計 ${totalCal.toFixed(0)} kcal</span></div>${rows}`;
+  }).join('');
+}
+async function addMealLog() {
+  const date = document.getElementById('meal-inp-date').value;
+  const mealType = document.getElementById('meal-inp-type').value;
+  const protein = parseFloat(document.getElementById('meal-inp-protein').value) || 0;
+  const fat = parseFloat(document.getElementById('meal-inp-fat').value) || 0;
+  const carb = parseFloat(document.getElementById('meal-inp-carb').value) || 0;
+  if (!date) { toast('日付を入力してください'); return; }
+  if (protein === 0 && fat === 0 && carb === 0) { toast('たんぱく質・脂質・炭水化物のいずれかを入力してください'); return; }
+  try {
+    await SupaClient.meals.insert({ date, mealType, protein, fat, carb });
+    document.getElementById('meal-inp-protein').value = '';
+    document.getElementById('meal-inp-fat').value = '';
+    document.getElementById('meal-inp-carb').value = '';
+    updateMealCalPreview();
+    toast('記録しました');
+    await loadMealLogs();
+    renderMealList();
+  } catch (e) {
+    toast('記録に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+async function deleteMealLog(id) {
+  if (!confirm('この食事記録を削除しますか？')) return;
+  try {
+    await SupaClient.meals.remove(id);
+    toast('削除しました');
+    await loadMealLogs();
+    renderMealList();
+  } catch (e) {
+    toast('削除に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
+}
+
 function onNameInput(el) {
   if([...el.value].length>30) el.value=[...el.value].slice(0,30).join('');
 }
@@ -110,7 +270,7 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表'};
+const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録'};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -125,6 +285,8 @@ function go(page) {
   if(page==='analysis')       renderAnalysis();
   if(page==='analysis-detail') renderAnalysisDetail();
   if(page==='rm')             initRMPage();
+  if(page==='weight')         initWeightPage();
+  if(page==='meal')           initMealPage();
 }
 
 // ===== ADD MENU =====

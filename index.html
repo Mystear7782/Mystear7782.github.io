@@ -73,6 +73,13 @@
     <div class="sb-item" data-page="csv" onclick="go('csv')">
       <span class="sb-icon">📥</span>CSV出力 / 入力
     </div>
+    <div class="sb-sec">体重・食事記録</div>
+    <div class="sb-item" data-page="weight" onclick="go('weight')">
+      <span class="sb-icon">⚖️</span>体重ログ
+    </div>
+    <div class="sb-item" data-page="meal" onclick="go('meal')">
+      <span class="sb-icon">🍽️</span>食事記録
+    </div>
   </nav>
 </div>
 
@@ -195,6 +202,84 @@
         分析に戻る
       </button>
       <div id="analysis-detail-body"></div>
+    </div>
+
+    <!-- BODY WEIGHT LOG -->
+    <div class="page" id="page-weight">
+      <div class="sec-head">
+        <div class="sec-title">体重ログ</div>
+        <div class="sec-sub">日々の体重を記録します（1日に複数回の記録も可能です）</div>
+      </div>
+      <div class="card">
+        <div class="card-label">体重を記録</div>
+        <div class="form-group">
+          <label>日付</label>
+          <input type="date" class="form-input" id="weight-inp-date">
+        </div>
+        <div class="rm-input-box" style="margin-bottom:14px">
+          <label>体重</label>
+          <div class="rm-input-wrap">
+            <input type="number" class="big-input" id="weight-inp-value" placeholder="65.0"
+              inputmode="decimal" min="0" step="0.1">
+            <span class="big-unit">kg</span>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="addBodyWeight()">記録する</button>
+      </div>
+      <div id="weight-list-body"></div>
+    </div>
+
+    <!-- MEAL LOG -->
+    <div class="page" id="page-meal">
+      <div class="sec-head">
+        <div class="sec-title">食事記録</div>
+        <div class="sec-sub">たんぱく質・脂質・炭水化物を入力するとカロリーを自動計算します</div>
+      </div>
+      <div class="card">
+        <div class="card-label">食事を記録</div>
+        <div class="form-group">
+          <label>日付</label>
+          <input type="date" class="form-input" id="meal-inp-date">
+        </div>
+        <div class="form-group">
+          <label>区分</label>
+          <select class="form-input" id="meal-inp-type">
+            <option value="朝">朝</option>
+            <option value="昼">昼</option>
+            <option value="夜">夜</option>
+            <option value="間食">間食</option>
+          </select>
+        </div>
+        <div class="rm-input-row">
+          <div class="rm-input-box">
+            <label>たんぱく質</label>
+            <div class="rm-input-wrap">
+              <input type="number" class="big-input" id="meal-inp-protein" placeholder="0"
+                inputmode="decimal" min="0" step="0.1" oninput="updateMealCalPreview()">
+              <span class="big-unit">g</span>
+            </div>
+          </div>
+          <div class="rm-input-box">
+            <label>脂質</label>
+            <div class="rm-input-wrap">
+              <input type="number" class="big-input" id="meal-inp-fat" placeholder="0"
+                inputmode="decimal" min="0" step="0.1" oninput="updateMealCalPreview()">
+              <span class="big-unit">g</span>
+            </div>
+          </div>
+        </div>
+        <div class="rm-input-box" style="margin-top:10px;margin-bottom:10px">
+          <label>炭水化物</label>
+          <div class="rm-input-wrap">
+            <input type="number" class="big-input" id="meal-inp-carb" placeholder="0"
+              inputmode="decimal" min="0" step="0.1" oninput="updateMealCalPreview()">
+            <span class="big-unit">g</span>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">推定カロリー: <span id="meal-cal-preview">0</span> kcal</div>
+        <button class="btn-primary" onclick="addMealLog()">記録する</button>
+      </div>
+      <div id="meal-list-body"></div>
     </div>
 
     <!-- RM CALCULATOR -->

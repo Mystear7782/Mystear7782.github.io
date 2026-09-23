@@ -95,4 +95,57 @@ const SupaExercises = {
   },
 };
 
-window.SupaClient = { auth: SupaAuth, exercises: SupaExercises };
+// ===== body_weight_logs（体重ログ） =====
+const SupaBodyWeight = {
+  // exercisesと同じ理由(直接の.from().select()がRLS正常時でも0件を返す事象)により、
+  // 読み取りは最初からRPC関数(get_my_body_weight_logs)経由にしている。
+  async list() {
+    const { data, error } = await getClient().rpc('get_my_body_weight_logs');
+    if (error) throw error;
+    return data;
+  },
+  async insert(entry) {
+    const { data, error } = await getClient()
+      .from('body_weight_logs')
+      .insert({ log_date: entry.date, weight_kg: entry.weight })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async remove(id) {
+    const { error } = await getClient().from('body_weight_logs').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+// ===== meal_logs（食事記録） =====
+const SupaMeals = {
+  // 同上の理由によりRPC関数(get_my_meal_logs)経由で読み取る。
+  async list() {
+    const { data, error } = await getClient().rpc('get_my_meal_logs');
+    if (error) throw error;
+    return data;
+  },
+  async insert(entry) {
+    const { data, error } = await getClient()
+      .from('meal_logs')
+      .insert({
+        log_date: entry.date,
+        meal_type: entry.mealType,
+        protein_g: entry.protein,
+        fat_g: entry.fat,
+        carb_g: entry.carb,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async remove(id) {
+    const { error } = await getClient().from('meal_logs').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+window.SupaClient = { auth: SupaAuth, exercises: SupaExercises, bodyWeight: SupaBodyWeight, meals: SupaMeals };
