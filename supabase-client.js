@@ -50,12 +50,11 @@ const SupaAuth = {
 // ===== exercises（メニュー） =====
 const SupaExercises = {
   // カテゴリ→sort_orderの順で取得（アプリ側のグループ表示順と一致させる）
+  // NOTE: 直接の .from('exercises').select() がRLS/認証は正常なのになぜか0件を返す
+  // 現象が確認されたため、暫定的にRPC関数(get_my_exercises)経由に変更している。
+  // RPC経由では同じ条件で正しく取得できることを確認済み。
   async list() {
-    const { data, error } = await getClient()
-      .from('exercises')
-      .select('id, name, category, type, archived, sort_order')
-      .order('category', { ascending: true })
-      .order('sort_order', { ascending: true });
+    const { data, error } = await getClient().rpc('get_my_exercises');
     if (error) throw error;
     return data;
   },
