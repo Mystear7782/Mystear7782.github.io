@@ -19,7 +19,7 @@
   #auth-gate .form-group{margin-bottom:12px}
   #auth-gate .auth-error{color:#f87171;font-size:12px;margin-bottom:12px;text-align:center}
 </style>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workout tracker">
@@ -46,6 +46,8 @@
     <button class="btn-primary" id="auth-login-btn" onclick="handleLogin()">ログイン</button>
   </div>
 </div>
+<div id="top-progress"><div class="bar"></div></div>
+<div id="boot-overlay"><div class="boot-card"><div class="spinner"></div><div class="boot-card-label">読み込み中...</div></div></div>
 <div id="overlay" onclick="closeSidebar()"></div>
 <div id="sidebar">
   <div class="sb-head">
@@ -90,9 +92,36 @@
 <div id="app">
   <div id="header">
     <button id="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
-    <div id="page-title">メニュー一覧</div>
+    <div id="page-title">ダッシュボード</div>
   </div>
   <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="sec-head">
+        <div class="sec-title">ダッシュボード</div>
+        <div class="sec-sub">直近7日の記録とクイックアクセス</div>
+      </div>
+      <div class="card-label" style="padding:0 2px">直近7日</div>
+      <div class="stats-grid" id="dash-stats" style="margin-top:0;margin-bottom:18px"></div>
+      <div class="card-label" style="padding:0 2px">クイック記録</div>
+      <div class="qa-row">
+        <button class="qa-btn qa-accent" onclick="go('menu-list')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 9h6M9 13h6"/></svg>
+          セット記録
+        </button>
+        <button class="qa-btn qa-green" onclick="go('weight')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><circle cx="12" cy="14" r="2.3"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg>
+          体重記録
+        </button>
+        <button class="qa-btn" onclick="go('meal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0Z"/><path d="M12 12V4"/></svg>
+          食事記録
+        </button>
+      </div>
+      <div class="card-label" style="padding:0 2px">最近の記録</div>
+      <div id="dash-recent"></div>
+    </div>
 
     <!-- ADD MENU -->
     <div class="page" id="page-add-menu">
@@ -134,7 +163,7 @@
     </div>
 
     <!-- MENU LIST -->
-    <div class="page active" id="page-menu-list">
+    <div class="page" id="page-menu-list">
       <div class="sec-head">
         <div class="sec-title">メニュー一覧</div>
         <div class="sec-sub">部位ごとに登録したメニューが表示されます</div>
@@ -214,6 +243,10 @@
         <div class="sec-title">体重ログ</div>
         <div class="sec-sub">日々の体重を記録します（1日に複数回の記録も可能です）</div>
       </div>
+      <div class="ana-tabs">
+        <button class="ana-tab active" onclick="go('weight')">体重</button>
+        <button class="ana-tab" onclick="go('meal')">食事</button>
+      </div>
       <div class="card">
         <div class="card-label">体重を記録</div>
         <div class="form-group">
@@ -245,6 +278,10 @@
       <div class="sec-head">
         <div class="sec-title">食事記録</div>
         <div class="sec-sub">たんぱく質・脂質・炭水化物を入力するとカロリーを自動計算します</div>
+      </div>
+      <div class="ana-tabs">
+        <button class="ana-tab" onclick="go('weight')">体重</button>
+        <button class="ana-tab active" onclick="go('meal')">食事</button>
       </div>
       <div class="card">
         <div class="card-label">食事を記録</div>
@@ -445,6 +482,30 @@
     </div>
 
   </div>
+
+  <div id="footer-nav">
+    <div class="fn-item" data-tab="dashboard" onclick="go('dashboard')">
+      <div class="fn-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg></div>
+      <div class="fn-label">ホーム</div>
+    </div>
+    <div class="fn-item" data-tab="record" onclick="go('menu-list')">
+      <div class="fn-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></div>
+      <div class="fn-label">記録</div>
+    </div>
+    <div class="fn-item" data-tab="analysis" onclick="go('analysis')">
+      <div class="fn-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M11 20V5M17 20v-6"/><path d="M3 20h18"/></svg></div>
+      <div class="fn-label">分析</div>
+    </div>
+    <div class="fn-item" data-tab="body" onclick="go('weight')">
+      <div class="fn-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><circle cx="12" cy="14" r="2.3"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg></div>
+      <div class="fn-label">ボディ</div>
+    </div>
+    <div class="fn-item" onclick="toggleSidebar()">
+      <div class="fn-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></div>
+      <div class="fn-label">その他</div>
+    </div>
+  </div>
+
 </div>
 <div id="toast"></div>
 

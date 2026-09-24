@@ -220,4 +220,46 @@ const SupaSessions = {
   },
 };
 
-window.SupaClient = { auth: SupaAuth, exercises: SupaExercises, bodyWeight: SupaBodyWeight, meals: SupaMeals, sessions: SupaSessions };
+// ===== 通信中インジケーター（ロード/書き込み共通） =====
+// 個々の呼び出し箇所に手を入れずに済むよう、SupaClientの全メソッドをここで一括ラップし、
+// 同時に実行中の呼び出し数(_inFlight)を数える。UI側(app.js)はSupaLoading.subscribe()で
+// 増減を購読し、ヘッダー下の細い進捗バー等の表示/非表示に使う（詳細はapp.js側を参照）。
+let _inFlight = 0;
+const _loadingListeners = new Set();
+function _notifyLoading() {
+  for (const fn of _loadingListeners) {
+    try { fn(_inFlight); } catch (e) { /* リスナー側のエラーで通信自体を止めない */ }
+  }
+}
+function _withLoading(fn) {
+  return async function (...args) {
+    _inFlight++;
+    _notifyLoading();
+    try {
+      return await fn(...args);
+    } finally {
+      _inFlight--;
+      _notifyLoading();
+    }
+  };
+}
+function _wrapAllWithLoading(obj) {
+  const wrapped = {};
+  for (const key of Object.keys(obj)) {
+    wrapped[key] = typeof obj[key] === 'function' ? _withLoading(obj[key]) : obj[key];
+  }
+  return wrapped;
+}
+
+window.SupaClient = {
+  auth: _wrapAllWithLoading(SupaAuth),
+  exercises: _wrapAllWithLoading(SupaExercises),
+  bodyWeight: _wrapAllWithLoading(SupaBodyWeight),
+  meals: _wrapAllWithLoading(SupaMeals),
+  sessions: _wrapAllWithLoading(SupaSessions),
+};
+window.SupaLoading = {
+  isLoading: () => _inFlight > 0,
+  // fn(count)を呼び出し数が変わるたびに呼ぶ。戻り値は購読解除用の関数。
+  subscribe: (fn) => { _loadingListeners.add(fn); return () => _loadingListeners.delete(fn); },
+};

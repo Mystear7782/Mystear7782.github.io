@@ -39,6 +39,26 @@ const toast = msg => {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
 };
+// ボタンをローディング状態（スピナー表示・操作不可）に切り替える／元に戻す共通ヘルパー。
+// true: 現在の表示内容を保存しスピナー+labelに差し替える。false: 保存しておいた表示に復元する。
+// 呼び出し側で、成功後にボタンのlabelを書き換えるような処理がある場合は、
+// その書き換えより前にsetBtnLoading(btn,false)を呼ぶこと（順序が逆だと復元で上書きされる）。
+function setBtnLoading(btn, loading, label) {
+  if (!btn) return;
+  if (loading) {
+    if (btn.dataset.origHtml === undefined) btn.dataset.origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('is-loading');
+    btn.innerHTML = `<div class="spinner"></div>${label ? esc(label) : ''}`;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('is-loading');
+    if (btn.dataset.origHtml !== undefined) {
+      btn.innerHTML = btn.dataset.origHtml;
+      delete btn.dataset.origHtml;
+    }
+  }
+}
 const tagClass = t => ({マシン:'tag-machine',フリーウェイト:'tag-free',自重運動:'tag-body',有酸素運動:'tag-cardio'}[t]||'');
 const dotColor = c => ({胸:'#f87171',背中:'#fb923c',肩:'#facc15',足:'#4ade80',腕:'#60a5fa',有酸素運動:'#c084fc',その他:'#9ca3af'}[c]||'#9ca3af');
 
@@ -218,6 +238,8 @@ async function addBodyWeight() {
   const weight = parseFloat(raw);
   if (!date) { toast('日付を入力してください'); return; }
   if (raw === '' || isNaN(weight) || weight <= 0) { toast('体重を正しく入力してください'); return; }
+  const btn = document.getElementById('weight-submit-btn');
+  setBtnLoading(btn, true, '保存中...');
   try {
     if (editingWeightId) {
       await SupaClient.bodyWeight.update(editingWeightId, { log_date: date, weight_kg: weight });
@@ -226,11 +248,13 @@ async function addBodyWeight() {
       await SupaClient.bodyWeight.insert({ date, weight });
       toast('記録しました');
     }
+    setBtnLoading(btn, false);
     cancelEditWeight();
     await loadBodyWeightLogs();
     renderWeightList();
     renderWeightChart();
   } catch (e) {
+    setBtnLoading(btn, false);
     toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
   }
 }
@@ -338,6 +362,8 @@ async function addMealLog() {
   const carb = parseFloat(document.getElementById('meal-inp-carb').value) || 0;
   if (!date) { toast('日付を入力してください'); return; }
   if (protein === 0 && fat === 0 && carb === 0) { toast('たんぱく質・脂質・炭水化物のいずれかを入力してください'); return; }
+  const btn = document.getElementById('meal-submit-btn');
+  setBtnLoading(btn, true, '保存中...');
   try {
     if (editingMealId) {
       await SupaClient.meals.update(editingMealId, {
@@ -348,10 +374,12 @@ async function addMealLog() {
       await SupaClient.meals.insert({ date, mealType, protein, fat, carb });
       toast('記録しました');
     }
+    setBtnLoading(btn, false);
     cancelEditMeal();
     await loadMealLogs();
     renderMealList();
   } catch (e) {
+    setBtnLoading(btn, false);
     toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
   }
 }
@@ -385,13 +413,23 @@ const closeSidebar = () => {
 };
 
 // ===== NAVIGATION =====
-const TITLES = {'add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録','config':'設定'};
+const TITLES = {'dashboard':'ダッシュボード','add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録','config':'設定'};
+// フッターナビのどのタブを「現在地」として光らせるか。ここに無いページ
+// (メニューセット/RM換算表/CSV/設定など)は「その他」経由のためどのタブも点灯しない。
+const FOOTER_TAB_MAP = {
+  'dashboard':'dashboard',
+  'menu-list':'record','menu-detail':'record','add-menu':'record','set-edit':'record',
+  'analysis':'analysis','analysis-detail':'analysis',
+  'weight':'body','meal':'body',
+};
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('page-title').textContent = TITLES[page]||page;
   document.querySelectorAll('.sb-item[data-page]').forEach(i=>i.classList.toggle('active',i.dataset.page===page));
+  document.querySelectorAll('.fn-item[data-tab]').forEach(i=>i.classList.toggle('active',i.dataset.tab===FOOTER_TAB_MAP[page]));
   closeSidebar();
+  if(page==='dashboard')      renderDashboard();
   if(page==='menu-list')      renderList();
   if(page==='menu-detail')    renderDetail();
   if(page==='menuset-list')   renderMenuSetList();
@@ -402,6 +440,101 @@ function go(page) {
   if(page==='rm')             initRMPage();
   if(page==='weight')         initWeightPage();
   if(page==='meal')           initMealPage();
+}
+
+// ===== ダッシュボード =====
+// 表示項目は初版（仮）。直近7日のセッション数・総ボリューム(筋トレのみ)・体重変化を集計し、
+// 直近の記録(セッション+体重ログ)を新しい順に5件まで表示する。
+async function renderDashboard() {
+  // 体重変化の算出に使うため、体重ログは表示のたびに最新を取得する
+  await loadBodyWeightLogs();
+
+  const cutoffD = new Date();
+  cutoffD.setDate(cutoffD.getDate() - 7);
+  const cutoffStr = `${cutoffD.getFullYear()}-${String(cutoffD.getMonth()+1).padStart(2,'0')}-${String(cutoffD.getDate()).padStart(2,'0')}`;
+
+  let sessionCount = 0, totalVolume = 0;
+  const recent = [];
+  for (const menu of S.menus) {
+    const sessMap = S.sessions[menu.id] || {};
+    for (const [sessId, sess] of Object.entries(sessMap)) {
+      recent.push({ date: sess.date, time: sess.time || '00:00', menu, sessId, sess });
+      if (sess.date >= cutoffStr) {
+        sessionCount++;
+        if (!isCardioMenu(menu)) {
+          (sess.sets || []).forEach(s => { totalVolume += s.w * s.r; });
+        }
+      }
+    }
+  }
+
+  // 体重変化: 最新記録と、直近7日より前で一番新しい記録を比較(無ければ最古の記録と比較)
+  let weightDeltaLabel = '—', weightDeltaColor = 'var(--text)', weightUnit = '';
+  const sortedWeights = [...S.bodyWeights].sort((a, b) => a.log_date < b.log_date ? 1 : (a.log_date > b.log_date ? -1 : 0));
+  if (sortedWeights.length) {
+    weightUnit = 'kg';
+    const latest = sortedWeights[0];
+    const baseline = sortedWeights.find(w => w.log_date < cutoffStr) || sortedWeights[sortedWeights.length - 1];
+    if (baseline && baseline.id !== latest.id) {
+      const delta = +(latest.weight_kg - baseline.weight_kg).toFixed(1);
+      weightDeltaLabel = (delta > 0 ? '+' : '') + delta;
+      weightDeltaColor = delta < 0 ? 'var(--green)' : (delta > 0 ? 'var(--red)' : 'var(--text)');
+    } else {
+      // 比較対象がまだ無い(記録が1件のみ)場合は現在値をそのまま出す
+      weightDeltaLabel = String(latest.weight_kg);
+      weightDeltaColor = 'var(--accent)';
+    }
+  }
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${sessionCount}</div><div class="stat-label">セッション</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--accent)">${totalVolume > 0 ? totalVolume.toFixed(0) : '—'}</div><div class="stat-unit">${totalVolume > 0 ? 'kg' : ''}</div><div class="stat-label">総ボリューム</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:${weightDeltaColor}">${weightDeltaLabel}</div><div class="stat-unit">${weightUnit}</div><div class="stat-label">体重変化</div></div>
+  `;
+
+  const items = [];
+  for (const r of recent) {
+    if (isCardioMenu(r.menu)) {
+      const c = r.sess.cardio || {};
+      const parts = [];
+      if (c.dist != null) parts.push(c.dist + ' km');
+      if (c.time != null) parts.push(c.time + ' 分');
+      items.push({ date: r.date, time: r.time, name: r.menu.name, valueLabel: parts.join(' / ') || '—',
+        onclick: `goToSessionFromDashboard('${r.menu.id}','${r.sessId}')` });
+    } else {
+      const cnt = (r.sess.sets || []).length;
+      items.push({ date: r.date, time: r.time, name: r.menu.name, valueLabel: cnt + 'セット',
+        onclick: `goToSessionFromDashboard('${r.menu.id}','${r.sessId}')` });
+    }
+  }
+  for (const w of S.bodyWeights) {
+    items.push({ date: w.log_date, time: '12:00', name: '体重記録', valueLabel: w.weight_kg + ' kg', onclick: `go('weight')` });
+  }
+  items.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+  const top = items.slice(0, 5);
+
+  const el = document.getElementById('dash-recent');
+  if (!top.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:24px 12px"><div class="empty-icon">📋</div><div class="empty-title">まだ記録がありません</div><div class="empty-desc">クイック記録から始めましょう</div></div>`;
+  } else {
+    el.innerHTML = top.map(it => `
+      <div class="dash-recent-row" onclick="${it.onclick}">
+        <div>
+          <div class="dash-recent-name">${esc(it.name)}</div>
+          <div class="dash-recent-date">${fmtDate(it.date)}</div>
+        </div>
+        <div class="dash-recent-val">${esc(it.valueLabel)}</div>
+      </div>`).join('');
+  }
+}
+// カレンダー経由(goToSessionFromCalendar)のダッシュボード版。戻るボタンをダッシュボードに設定する。
+function goToSessionFromDashboard(menuId, sessId) {
+  S.menu = S.menus.find(m=>m.id===menuId);
+  S.sessionId = sessId;
+  S.editingSetIdx = null;
+  S.fromCalendar = true; // 保存後に自動遷移しない挙動を流用
+  document.getElementById('set-back').onclick = () => go('dashboard');
+  go('set-edit');
 }
 
 // ===== ADD MENU =====
@@ -1104,12 +1237,16 @@ async function saveCardioFinal(){
   if(c.cal==null)   missing.push('消費カロリー');
   if(c.hr==null)    missing.push('平均心拍数');
   if(missing.length){ toast(`未入力項目: ${missing.join('・')}`); return; }
+  const btn = document.getElementById('btn-save-cardio');
+  setBtnLoading(btn, true, '保存中...');
   try {
     await SupaClient.sessions.saveCardio(S.sessionId, c);
   } catch(e) {
+    setBtnLoading(btn, false);
     toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
     return;
   }
+  setBtnLoading(btn, false);
   toast('記録を保存しました');
   // F-04: カレンダー経由の場合は画面を移動しない（set-editにとどまる）
   if(!S.fromCalendar) go('menu-detail');
@@ -1179,10 +1316,13 @@ async function commitSet(){
   const r = parseInt(document.getElementById('inp-r').value);
   if(isBodyweight ? !r : (!w||!r)) return;
   const sets=S.sessions[S.menu.id][S.sessionId].sets;
+  const btn = document.getElementById('btn-add-set');
+  setBtnLoading(btn, true, '保存中...');
   try {
     if(S.editingSetIdx!==null){
       const target = sets[S.editingSetIdx];
       await SupaClient.sessions.updateSet(target.id, w, r);
+      setBtnLoading(btn, false);
       target.w=w; target.r=r;
       S.editingSetIdx=null;
       document.getElementById('form-label').textContent='セットを追加';
@@ -1191,10 +1331,12 @@ async function commitSet(){
     } else {
       const setNo = sets.length+1;
       const created = await SupaClient.sessions.addSet(S.sessionId, setNo, w, r);
+      setBtnLoading(btn, false);
       sets.push({id:created.id, w, r});
       toast('セットを追加しました');
     }
   } catch(e) {
+    setBtnLoading(btn, false);
     toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
     return;
   }
@@ -1946,6 +2088,15 @@ function hideAuthGate() {
   if (gate) gate.style.display = 'none';
   if (app) app.style.display = '';
 }
+// アプリを開いた直後の初回データ読み込み中に表示する全画面オーバーレイ
+function showBootOverlay() {
+  const el = document.getElementById('boot-overlay');
+  if (el) el.classList.add('show');
+}
+function hideBootOverlay() {
+  const el = document.getElementById('boot-overlay');
+  if (el) el.classList.remove('show');
+}
 function setAuthError(msg) {
   const el = document.getElementById('auth-error');
   if (!el) return;
@@ -1962,9 +2113,14 @@ async function handleLogin() {
   try {
     await SupaClient.auth.signInWithPassword(email, password);
     hideAuthGate();
-    await loadExercisesFromSupabase();
-    await loadSessionsFromSupabase();
-    renderList();
+    showBootOverlay();
+    try {
+      await loadExercisesFromSupabase();
+      await loadSessionsFromSupabase();
+    } finally {
+      hideBootOverlay();
+    }
+    go('dashboard');
   } catch (e) {
     // デバッグのため実際のエラーメッセージも表示する（原因切り分け用、後で簡潔なメッセージに戻す）
     const detail = (e && e.message) ? e.message : String(e);
@@ -2003,8 +2159,33 @@ async function boot() {
     return;
   }
   hideAuthGate();
-  await loadExercisesFromSupabase();
-  await loadSessionsFromSupabase();
-  renderList();
+  showBootOverlay();
+  try {
+    await loadExercisesFromSupabase();
+    await loadSessionsFromSupabase();
+  } finally {
+    hideBootOverlay();
+  }
+  go('dashboard');
 }
+
+// ===== 通信中インジケーター（ヘッダー下の細い進捗バー） =====
+// supabase-client.js側のSupaLoadingの増減を購読する。瞬時に終わる通信でちらつかないよう、
+// 150ms以上継続している場合だけ表示する（非表示は即時）。
+if (window.SupaLoading) {
+  let _tpShowTimer = null;
+  window.SupaLoading.subscribe(count => {
+    const el = document.getElementById('top-progress');
+    if (!el) return;
+    if (count > 0) {
+      if (!_tpShowTimer && !el.classList.contains('show')) {
+        _tpShowTimer = setTimeout(() => { el.classList.add('show'); _tpShowTimer = null; }, 150);
+      }
+    } else {
+      if (_tpShowTimer) { clearTimeout(_tpShowTimer); _tpShowTimer = null; }
+      el.classList.remove('show');
+    }
+  });
+}
+
 boot();
