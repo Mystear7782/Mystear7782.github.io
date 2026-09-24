@@ -187,7 +187,23 @@ const SupaSessions = {
     const { error } = await getClient().from('workout_sessions').delete().eq('id', sessionId);
     if (error) throw error;
   },
-  async addSet(sessionId, setNo, w, r) {
+  // fallbackSetNo: 呼び出し元(app.js)が計算したローカルのセット件数ベースの値
+  // （途中のセット削除・再追加でapp.js側のローカル件数とDB側のset_noがずれている場合に
+  // 重複しうるため、できる限りDB側の実際の最大set_noを問い合わせて上書きする。
+  // 問い合わせに失敗した場合はfallbackSetNoをそのまま使う＝従来と同じ挙動に留まる）
+  async addSet(sessionId, fallbackSetNo, w, r) {
+    let setNo = fallbackSetNo;
+    try {
+      const { data: existing, error: qErr } = await getClient()
+        .from('sets')
+        .select('set_no')
+        .eq('session_id', sessionId)
+        .order('set_no', { ascending: false })
+        .limit(1);
+      if (!qErr && existing && existing.length) {
+        setNo = Math.max(fallbackSetNo, existing[0].set_no + 1);
+      }
+    } catch (e) { /* 取得できない場合はfallbackSetNoを使う */ }
     const { data, error } = await getClient()
       .from('sets')
       .insert({ session_id: sessionId, set_no: setNo, weight_kg: w, reps: r })

@@ -95,30 +95,41 @@ function menuStats(menuId) {
 // ===== セッション/セット/有酸素記録（Supabase直接、localStorage非経由） =====
 // get_my_sessions_full() RPCの1行を、既存の描画コード(renderDetail/menuStats/
 // カレンダー/分析/CSV)がそのまま扱えるS.sessions[menuId][sessionId]形状に変換する。
-// isCardioMenu判定にS.menusを使うため、必ずloadExercisesFromSupabase()の後に呼ぶこと。
-async function loadSessionsFromSupabase() {
+//
+// fetchSessionsRows()（通信のみ）とapplySessionsRows()（S.menusを使った変換のみ）に
+// 分けてあるのは、起動時にexercises取得と並行して通信だけ先に走らせるため
+// （B-5: 以前はexercises取得→sessions取得の完全な直列だった）。isCardioMenu判定に
+// S.menusを使うため、applySessionsRows()自体は必ずS.menusが揃った後に呼ぶこと。
+async function fetchSessionsRows() {
   try {
-    const rows = await SupaClient.sessions.listFull();
-    const sessions = {};
-    for (const row of rows) {
-      const menu = S.menus.find(m => m.id === row.exercise_id);
-      if (!sessions[row.exercise_id]) sessions[row.exercise_id] = {};
-      const entry = { date: row.session_date, time: row.session_time || '00:00' };
-      if (isCardioMenu(menu)) {
-        const c = row.cardio || {};
-        entry.cardio = {
-          time: c.time ?? null, dist: c.dist ?? null, cal: c.cal ?? null,
-          hr: c.hr ?? null, maxSpd: c.maxSpd ?? null, avgSpd: c.avgSpd ?? null,
-        };
-      } else {
-        entry.sets = (row.sets || []).map(s => ({ id: s.id, w: s.w, r: s.r }));
-      }
-      sessions[row.exercise_id][row.session_id] = entry;
-    }
-    S.sessions = sessions;
+    return await SupaClient.sessions.listFull();
   } catch (e) {
     toast('トレーニング記録の取得に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return null;
   }
+}
+function applySessionsRows(rows) {
+  if (rows === null) return; // 取得失敗時はS.sessionsを不用意に空へ上書きしない
+  const sessions = {};
+  for (const row of rows) {
+    const menu = S.menus.find(m => m.id === row.exercise_id);
+    if (!sessions[row.exercise_id]) sessions[row.exercise_id] = {};
+    const entry = { date: row.session_date, time: row.session_time || '00:00' };
+    if (isCardioMenu(menu)) {
+      const c = row.cardio || {};
+      entry.cardio = {
+        time: c.time ?? null, dist: c.dist ?? null, cal: c.cal ?? null,
+        hr: c.hr ?? null, maxSpd: c.maxSpd ?? null, avgSpd: c.avgSpd ?? null,
+      };
+    } else {
+      entry.sets = (row.sets || []).map(s => ({ id: s.id, w: s.w, r: s.r }));
+    }
+    sessions[row.exercise_id][row.session_id] = entry;
+  }
+  S.sessions = sessions;
+}
+async function loadSessionsFromSupabase() {
+  applySessionsRows(await fetchSessionsRows());
 }
 
 // ===== 体重ログ（Supabase直接、localStorage非経由） =====
@@ -423,6 +434,13 @@ const FOOTER_TAB_MAP = {
   'weight':'body','meal':'body',
 };
 function go(page) {
+  // A-6: set-edit画面を離れる際、まだ一度もセット/有酸素記録が保存されていない
+  // (pending)セッションが残っていれば、ローカル状態から破棄する（サーバー側には
+  // 最初から何も作られていないため、サーバー側の後始末は不要）
+  const prevPageEl = document.querySelector('.page.active');
+  const prevPage = prevPageEl ? prevPageEl.id.replace('page-','') : null;
+  if (prevPage === 'set-edit' && page !== 'set-edit') discardPendingSession();
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('page-title').textContent = TITLES[page]||page;
@@ -654,6 +672,10 @@ const DRAG_HANDLE_SVG = `<svg viewBox="0 0 24 24" width="18" height="18"><circle
 //
 // handleEl: つまみ要素(pointerdownのターゲット), rowSelector: 行を表すCSSセレクタ,
 // onCommit(listEl, rowEl): ドロップ確定時に呼ばれ、並び替え後のリストを渡す
+// ドラッグ開始とみなす移動量のしきい値(px)。これ未満の動き(タップ相当)では
+// ドラッグを開始せず、保存処理も一切呼ばない（レビュー指摘A-2対応）。
+const DRAG_START_THRESHOLD = 4;
+
 function startRowDrag(e, handleEl, rowSelector, onCommit){
   if(e.pointerType==='mouse' && e.button!==0) return;
   e.preventDefault();
@@ -666,9 +688,13 @@ function startRowDrag(e, handleEl, rowSelector, onCommit){
 
   const startRect = el.getBoundingClientRect();
   const grabOffsetY = e.clientY - startRect.top; // 行内のどこをつまんだか
+  const startClientY = e.clientY;
   const placeholder = document.createElement('div');
   placeholder.className = 'drag-row-placeholder';
   placeholder.style.height = startRect.height + 'px';
+
+  // 並びが実際に変わったかどうかを判定するための開始時点の順序
+  const originalOrder = [...listEl.querySelectorAll(rowSelector)].map(r=>r.dataset.id);
 
   let dragging = false;
 
@@ -683,8 +709,23 @@ function startRowDrag(e, handleEl, rowSelector, onCommit){
     if(navigator.vibrate) navigator.vibrate(15);
   }
 
+  // ドラッグ中断時（pointercancel/lostpointercapture）に呼ぶ。並びを元に戻し、
+  // 保存処理は一切呼ばない（レビュー指摘A-3対応）。
+  function revertDrag(){
+    if(dragging){
+      el.classList.remove('dragging');
+      el.style.position=''; el.style.left=''; el.style.top=''; el.style.width='';
+      listEl.insertBefore(el, placeholder);
+    }
+    if(placeholder.parentNode) placeholder.remove();
+  }
+
   function onMove(ev){
-    if(!dragging) beginDrag();
+    if(!dragging){
+      // しきい値未満の動きはまだドラッグ開始とみなさない
+      if(Math.abs(ev.clientY - startClientY) < DRAG_START_THRESHOLD) return;
+      beginDrag();
+    }
     const newTop = ev.clientY - grabOffsetY;
     el.style.top = newTop + 'px';
     const centerY = newTop + startRect.height/2;
@@ -708,31 +749,56 @@ function startRowDrag(e, handleEl, rowSelector, onCommit){
       el.style.position=''; el.style.left=''; el.style.top=''; el.style.width='';
       listEl.insertBefore(el, placeholder);
       placeholder.remove();
-      onCommit(listEl, el);
+      // 並びが実際に変わっていない(つまみに触れただけ)場合は保存処理を呼ばない
+      const newOrder = [...listEl.querySelectorAll(rowSelector)].map(r=>r.dataset.id);
+      const changed = newOrder.length !== originalOrder.length || newOrder.some((id,i)=>id!==originalOrder[i]);
+      if(changed) onCommit(listEl, el);
     } else if(placeholder.parentNode){
       placeholder.remove();
     }
   }
+  // iOSの通知・画面端スワイプ等で操作が中断された場合。並びは確定しない。
+  function onCancel(){
+    cleanup();
+    try{ handleEl.releasePointerCapture(e.pointerId); }catch(err){}
+    revertDrag();
+  }
   function cleanup(){
     handleEl.removeEventListener('pointermove', onMove);
     handleEl.removeEventListener('pointerup', onUp);
-    handleEl.removeEventListener('pointercancel', onUp);
+    handleEl.removeEventListener('pointercancel', onCancel);
+    handleEl.removeEventListener('lostpointercapture', onCancel);
   }
   handleEl.addEventListener('pointermove', onMove);
   handleEl.addEventListener('pointerup', onUp);
-  handleEl.addEventListener('pointercancel', onUp);
+  handleEl.addEventListener('pointercancel', onCancel);
+  handleEl.addEventListener('lostpointercapture', onCancel);
 }
 
 async function commitMenuOrder(cat, listEl){
   const ids = [...listEl.querySelectorAll('.menu-row')].map(r=>r.dataset.id);
-  const catMenusInNewOrder = ids.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
+  // アーカイブ非表示時は、非表示のアーカイブ済みメニューがidsに含まれない。
+  // それらのsort_orderを据え置くと新しく振り直す番号と衝突するため、表示中の
+  // 並び替え結果の後ろに（元の順序のまま）追加してカテゴリ全体を振り直す。
+  const allIds = S.showArchived
+    ? ids
+    : [...ids, ...S.menus.filter(m=>m.category===cat && m.archived && !ids.includes(m.id)).map(m=>m.id)];
+
+  const catMenusInNewOrder = allIds.map(id => S.menus.find(m=>m.id===id)).filter(Boolean);
+  const prevMenus = S.menus; // サーバー保存に失敗した場合のロールバック用
   let idx=0;
-  S.menus = S.menus.map(m => (m.category===cat && ids.includes(m.id)) ? catMenusInNewOrder[idx++] : m);
+  S.menus = S.menus.map(m => (m.category===cat && allIds.includes(m.id)) ? catMenusInNewOrder[idx++] : m);
   persist();
   try {
-    await SupaClient.exercises.reorderCategory(cat, ids);
+    await SupaClient.exercises.reorderCategory(cat, allIds);
   } catch(e) {
-    toast('並び順の保存に失敗しました（通信を確認してください）');
+    // サーバーへの反映に失敗した場合、ローカルの並びも元に戻す。
+    // そのままにすると、今は保存できたように見えて次回起動時にサーバー側の
+    // 古い並びで上書きされ、変更が黙って消えてしまう。
+    S.menus = prevMenus;
+    persist();
+    renderList();
+    toast('並び順の保存に失敗しました（元に戻しました。通信を確認してください）');
   }
 }
 
@@ -1092,29 +1158,50 @@ function deleteMenuSet(setId) {
 }
 
 // ===== SET EDIT =====
+// A-6: 「新規セッション」時はここではDBに行を作らず、pending:trueのローカルの
+// 仮セッションだけを用意する。実際にサーバーへセッションを作るのは、最初のセット/
+// 有酸素記録が保存される瞬間（ensureRealSession()）まで遅延する。これにより、
+// 何も入力せずに戻った場合にDB側へ空のセッションが残る問題を防ぐ。
 async function openSetEdit(sid){
   if(sid){
     S.sessionId=sid;
   } else {
     // 有酸素は cardio オブジェクト、筋トレは sets 配列で初期化
-    // time: 新規セッション作成時点の現在時刻を自動セット（手動で変更も可能）
-    try {
-      const created = await SupaClient.sessions.createSession(S.menu.id, today(), nowTime());
-      const init = isCardioMenu(S.menu)
-        ? {date:created.session_date, time:created.session_time, cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
-        : {date:created.session_date, time:created.session_time, sets:[]};
-      if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
-      S.sessions[S.menu.id][created.id]=init;
-      S.sessionId=created.id;
-    } catch(e) {
-      toast('セッションの作成に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
-      return;
-    }
+    // time: 画面を開いた時点の現在時刻を自動セット（手動で変更も可能）
+    const tempId = 'pending_' + Date.now();
+    const init = isCardioMenu(S.menu)
+      ? {date:today(), time:nowTime(), cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}, pending:true}
+      : {date:today(), time:nowTime(), sets:[], pending:true};
+    if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
+    S.sessions[S.menu.id][tempId]=init;
+    S.sessionId=tempId;
   }
   S.editingSetIdx=null;
   S.fromCalendar=false;
   document.getElementById('set-back').onclick=()=>go('menu-detail');
   go('set-edit');
+}
+
+// pending(未作成)セッションであれば、その時点のローカルの日付/時刻でサーバーへ
+// 実際に作成し、S.sessions内のキーを仮ID→実IDへ差し替えてS.sessionIdを更新する。
+// 既に実セッションの場合は何もしない。commitSet/saveCardioFinalの、実際に
+// データを書き込む直前で呼ぶこと。
+async function ensureRealSession(){
+  const sess = S.sessions[S.menu.id][S.sessionId];
+  if(!sess || !sess.pending) return sess;
+  const created = await SupaClient.sessions.createSession(S.menu.id, sess.date, sess.time);
+  const { pending, ...rest } = sess;
+  delete S.sessions[S.menu.id][S.sessionId];
+  S.sessions[S.menu.id][created.id] = rest;
+  S.sessionId = created.id;
+  return rest;
+}
+
+// set-edit画面を離れる際、一度もデータが保存されなかったpendingセッションを破棄する
+function discardPendingSession(){
+  if(!S.menu || !S.sessionId) return;
+  const sess = S.sessions[S.menu.id]?.[S.sessionId];
+  if(sess && sess.pending) delete S.sessions[S.menu.id][S.sessionId];
 }
 
 function renderSetEdit(){
@@ -1269,6 +1356,8 @@ async function saveCardioFinal(){
   const btn = document.getElementById('btn-save-cardio');
   setBtnLoading(btn, true, '保存中...');
   try {
+    // A-6: 初回保存時に限り、ここで実セッションを作成する（pendingでなければ何もしない）
+    await ensureRealSession();
     await SupaClient.sessions.saveCardio(S.sessionId, c);
   } catch(e) {
     setBtnLoading(btn, false);
@@ -1344,10 +1433,12 @@ async function commitSet(){
   const w = isBodyweight ? 0 : parseFloat(wEl ? wEl.value : '');
   const r = parseInt(document.getElementById('inp-r').value);
   if(isBodyweight ? !r : (!w||!r)) return;
-  const sets=S.sessions[S.menu.id][S.sessionId].sets;
   const btn = document.getElementById('btn-add-set');
   setBtnLoading(btn, true, '保存中...');
   try {
+    // A-6: 初回保存時に限り、ここで実セッションを作成する（pendingでなければ何もしない）
+    await ensureRealSession();
+    const sets=S.sessions[S.menu.id][S.sessionId].sets;
     if(S.editingSetIdx!==null){
       const target = sets[S.editingSetIdx];
       await SupaClient.sessions.updateSet(target.id, w, r);
@@ -1715,15 +1806,24 @@ function renderAnalysisDetail() {
   }
 }
 
+// 読み込み中のPromiseを共有し、読み込み完了前に複数回呼ばれてもscriptタグを
+// 複数回追加しないようにする（分析詳細画面をすばやく連続で開くと発生しうる）
+let _chartJsLoadPromise = null;
 function waitForChartJs(cb) {
   if (window.Chart) { cb(); return; }
-  const s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-  // SRI: cdnjsの公開ハッシュ(sha512)。バージョンを上げる際はハッシュも更新すること
-  s.integrity = 'sha512-CQBWl4fJHWbryGE+Pc7UAxWMUMNMWzWxF4SQo9CgkJIN1kx6djDQZjh3Y8SZ1d+6I+1zze6Z7kHXO7q3UyZAWw==';
-  s.crossOrigin = 'anonymous';
-  s.onload = cb;
-  document.head.appendChild(s);
+  if (!_chartJsLoadPromise) {
+    _chartJsLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+      // SRI: cdnjsの公開ハッシュ(sha512)。バージョンを上げる際はハッシュも更新すること
+      s.integrity = 'sha512-CQBWl4fJHWbryGE+Pc7UAxWMUMNMWzWxF4SQo9CgkJIN1kx6djDQZjh3Y8SZ1d+6I+1zze6Z7kHXO7q3UyZAWw==';
+      s.crossOrigin = 'anonymous';
+      s.onload = () => resolve();
+      s.onerror = () => { _chartJsLoadPromise = null; reject(new Error('Chart.jsの読み込みに失敗しました')); };
+      document.head.appendChild(s);
+    });
+  }
+  _chartJsLoadPromise.then(cb).catch(e => toast(e.message));
 }
 
 function drawChart(key, labels, data) {
@@ -1878,6 +1978,11 @@ function downloadCSV(filename, content) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// CSVのフィールドをダブルクォートで囲み、内部の"は""にエスケープする(RFC4180準拠)。
+// 以前はメニュー名を"で囲むだけで内部の"をエスケープしておらず、"を含む名前だと
+// 壊れたCSVになっていた（インポート側も""を読めなかったため二重に壊れていた）。
+const csvField = v => `"${String(v).replace(/"/g,'""')}"`;
+
 // ① 筋トレCSV行生成（推定1RM・ボリューム列追加）
 // session_time列: workout_sessions.session_time（DB設計）に対応する時刻(HH:MM)。
 // 以前は未出力だったため、エクスポート→インポートを往復すると時刻が00:00にリセットされていた（③で修正）。
@@ -1893,7 +1998,7 @@ function buildStrengthRows(menus) {
         const e1rm = orm(s.w, s.r);
         const vol  = +(s.w * s.r).toFixed(1);
         rows.push([
-          `"${m.name}"`, m.category, m.type,
+          csvField(m.name), m.category, m.type,
           sess.date, sess.id, sess.time || '00:00', i+1, s.w, s.r, e1rm, vol
         ].join(','));
       });
@@ -1914,7 +2019,7 @@ function buildCardioRows(menus) {
     for (const sess of sessList) {
       const c = sess.cardio || {};
       rows.push([
-        `"${m.name}"`, m.category,
+        csvField(m.name), m.category,
         sess.date, sess.id, sess.time || '00:00',
         c.time??'', c.dist??'', c.cal??'', c.hr??'',
         c.maxSpd??'', c.avgSpd??''
@@ -1955,15 +2060,26 @@ function exportMenuCSV(menuId) {
 }
 
 // CSVパース（引用符対応）
+// 以前は"を見るたびに単純にinQを反転していたため、""（エスケープされた"）を
+// 正しく読めず、内部の"が消えてしまっていた。RFC4180の""→"アンエスケープに対応。
 function parseCSV(text) {
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
   return lines.map(line => {
     const cols = []; let cur = ''; let inQ = false;
     for (let i=0; i<line.length; i++) {
       const c = line[i];
-      if (c==='"') { inQ=!inQ; }
-      else if (c===',' && !inQ) { cols.push(cur.trim()); cur=''; }
-      else { cur+=c; }
+      if (inQ) {
+        if (c === '"') {
+          if (line[i+1] === '"') { cur += '"'; i++; } // ""→"（エスケープされた引用符）
+          else { inQ = false; }
+        } else {
+          cur += c;
+        }
+      } else {
+        if (c === '"' && cur === '') { inQ = true; }
+        else if (c === ',') { cols.push(cur.trim()); cur=''; }
+        else { cur += c; }
+      }
     }
     cols.push(cur.trim());
     return cols;
@@ -2144,8 +2260,11 @@ async function handleLogin() {
     hideAuthGate();
     showBootOverlay();
     try {
-      await loadExercisesFromSupabase();
-      await loadSessionsFromSupabase();
+      // B-5: メニュー取得と記録取得を並行して走らせる（記録の変換だけはS.menusが
+      // 揃ってから行う必要があるため、通信=fetchSessionsRowsと変換=applySessionsRows
+      // を分けている）
+      const [, sessionsRows] = await Promise.all([loadExercisesFromSupabase(), fetchSessionsRows()]);
+      applySessionsRows(sessionsRows);
     } finally {
       hideBootOverlay();
     }
@@ -2190,8 +2309,9 @@ async function boot() {
   hideAuthGate();
   showBootOverlay();
   try {
-    await loadExercisesFromSupabase();
-    await loadSessionsFromSupabase();
+    // B-5: メニュー取得と記録取得を並行して走らせる（詳細はhandleLogin側のコメント参照）
+    const [, sessionsRows] = await Promise.all([loadExercisesFromSupabase(), fetchSessionsRows()]);
+    applySessionsRows(sessionsRows);
   } finally {
     hideBootOverlay();
   }

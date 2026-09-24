@@ -141,7 +141,7 @@ input,select{font-family:var(--font)}
    居座ることがあり、ドラッグ操作中に指が通過した他の行の枠が誤って
    色付いてしまう原因になるため(hover:hover)でガードする */
 @media (hover:hover){ .menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)} }
-.menu-row.dragging{z-index:30;box-shadow:var(--shadow);opacity:.95;transition:none;touch-action:none}
+.menu-row.dragging{z-index:30;box-shadow:var(--shadow);opacity:.95;transition:none;touch-action:none;transform:none}
 .drag-row-placeholder{border-radius:var(--r-sm);border:1.5px dashed var(--border2);background:var(--bg3)}
 .menu-row.archived{opacity:.6;border-style:dashed}
 @media (hover:hover){ .menu-row.archived:hover{border-color:var(--amber);transform:none} }
