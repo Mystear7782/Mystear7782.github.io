@@ -436,58 +436,11 @@
     <div class="page" id="page-config">
       <div class="sec-head">
         <div class="sec-title">設定</div>
-        <div class="sec-sub">移行用・デバッグ用のツールをまとめています</div>
+        <div class="sec-sub">Supabase移行が完了したため、移行用ツールは撤去しました</div>
       </div>
-
-      <!-- 移行用（一時的）: Supabase移行のためメニュー一覧の生データを表示。移行完了後に削除予定 -->
-      <div class="csv-section">
-        <div class="csv-section-title">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg>
-          移行用: メニューデータを表示（一時的）
-        </div>
-        <div class="csv-notice">
-          Supabase移行のための一時的な機能です。タップするとこの端末に保存されているメニュー一覧の生データが表示されます。全選択してコピーしてください。
-        </div>
-        <button class="csv-btn" onclick="showMenusDebug()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
-          <div class="csv-btn-body">
-            <div class="csv-btn-label">メニュー一覧データを表示</div>
-            <div class="csv-btn-sub">gl_menusの内容をこの画面に表示します</div>
-          </div>
-        </button>
-        <textarea id="menus-debug-out" readonly style="display:none;width:100%;height:200px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
-        <button class="csv-btn" style="margin-top:10px" onclick="showSessionsDebug()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
-          <div class="csv-btn-body">
-            <div class="csv-btn-label">セッションデータを表示（復旧用）</div>
-            <div class="csv-btn-sub">gl_sessionsの内容をこの画面に表示します</div>
-          </div>
-        </button>
-        <textarea id="sessions-debug-out" readonly style="display:none;width:100%;height:200px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
-        <button class="csv-btn" style="margin-top:10px" onclick="testSupabaseExercises()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h5l3 3v6H4z"/><path d="M9 4v3h3"/></svg>
-          <div class="csv-btn-body">
-            <div class="csv-btn-label">Supabase接続テスト</div>
-            <div class="csv-btn-sub">exercisesを直接取得し、結果またはエラーをそのまま表示します</div>
-          </div>
-        </button>
-        <textarea id="supa-test-out" readonly style="display:none;width:100%;height:200px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
-        <button class="csv-btn" style="margin-top:10px" onclick="importRecoveredSessions()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v7M5 7l3 3 3-3"/><path d="M3 12h10"/></svg>
-          <div class="csv-btn-body">
-            <div class="csv-btn-label">セッションデータを復旧インポート（一時的）</div>
-            <div class="csv-btn-sub">9/12バックアップCSVから復元したセット記録を、現在のメニューidに合わせてこの端末にインポートします（既存のセッションは上書きしません）</div>
-          </div>
-        </button>
-        <textarea id="import-sessions-out" readonly style="display:none;width:100%;height:120px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
-        <button class="csv-btn" style="margin-top:10px;border-color:var(--red);color:var(--red-t)" onclick="migrateLocalSessionsToSupabase()">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v7M5 7l3 3 3-3"/><path d="M3 12h10"/></svg>
-          <div class="csv-btn-body">
-            <div class="csv-btn-label">セッション記録をSupabaseへ移行（一時的・要注意）</div>
-            <div class="csv-btn-sub">この端末に残っているgl_sessions（トレーニング記録）を1回だけSupabaseへ書き込みます。実行前にメニュー移行（上のツール）が完了している必要があります。二重実行に注意してください。</div>
-          </div>
-        </button>
-        <textarea id="migrate-sessions-out" readonly style="display:none;width:100%;height:160px;margin-top:10px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box"></textarea>
+      <div class="empty-state" style="padding:32px 16px">
+        <div class="empty-icon">⚙️</div>
+        <div class="empty-title">設定項目はまだありません</div>
       </div>
     </div>
 
