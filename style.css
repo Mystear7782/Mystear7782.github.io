@@ -136,11 +136,15 @@ input,select{font-family:var(--font)}
 .group-name{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.6px;text-transform:uppercase}
 .group-cnt{margin-left:auto;font-size:11px;color:var(--text3);background:var(--bg3);padding:1px 8px;border-radius:20px;border:1px solid var(--border)}
 .menu-list{display:flex;flex-direction:column;gap:8px}
-.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)}
-.menu-row.dragging{z-index:50;box-shadow:var(--shadow);opacity:.92;transition:none;touch-action:none}
+.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;outline:none}
+/* hoverはマウス等の実デバイスのみに限定。iOSはタッチ後に:hoverが一時的に
+   居座ることがあり、ドラッグ操作中に指が通過した他の行の枠が誤って
+   色付いてしまう原因になるため(hover:hover)でガードする */
+@media (hover:hover){ .menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)} }
+.menu-row.dragging{z-index:30;box-shadow:var(--shadow);opacity:.95;transition:none;touch-action:none}
+.drag-row-placeholder{border-radius:var(--r-sm);border:1.5px dashed var(--border2);background:var(--bg3)}
 .menu-row.archived{opacity:.6;border-style:dashed}
-.menu-row.archived:hover{border-color:var(--amber);transform:none}
+@media (hover:hover){ .menu-row.archived:hover{border-color:var(--amber);transform:none} }
 .menu-row-left{flex:1;min-width:0}
 .menu-row-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu-row-tags{display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap}
@@ -149,7 +153,7 @@ input,select{font-family:var(--font)}
    競合するため、ここだけをtouch-action:noneにしてドラッグの起点にする */
 .menu-row-handle{flex-shrink:0;align-self:stretch;display:flex;align-items:center;justify-content:center;
   width:34px;margin:-14px -2px -14px -16px;color:var(--text3);border-radius:var(--r-sm) 0 0 var(--r-sm);
-  touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+  touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;outline:none;
   cursor:grab;transition:background .15s,color .15s}
 .menu-row-handle:active{cursor:grabbing;color:var(--accent);background:var(--bg3)}
 .menu-row.dragging .menu-row-handle{color:var(--accent);background:var(--accent-bg)}

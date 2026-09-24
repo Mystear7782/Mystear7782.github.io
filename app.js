@@ -643,6 +643,15 @@ const DRAG_HANDLE_SVG = `<svg viewBox="0 0 24 24" width="18" height="18"><circle
 // 行本体ではなく専用の小さな「つまみ」からのみドラッグを開始する方式にしている
 // (つまみはtouch-action:noneかつテキストを含まないため、iOS側のテキスト選択
 // ジェスチャーと衝突しない)。
+//
+// 実装方式: ドラッグ中の行はposition:fixedにして指の位置にそのまま追従させ、
+// 元の位置には高さだけ確保したプレースホルダーを差し込む。他の行との入れ替え判定は
+// 「プレースホルダーをどこに挿入すべきか」を毎回センターYの比較だけで直接決定する
+// (隣と1件ずつ入れ替えて位置をリセット…を繰り返す方式ではない)。これにより、
+// 指を素早く動かして複数件分ジャンプしても1回のイベントで正しい位置まで追従できる。
+// またhandleEl側でsetPointerCaptureする事で、ドラッグ中に指が他の行の上を通っても
+// その行にホバー/アクティブ状態が付いてしまう(枠が色付くなど)のを防いでいる。
+//
 // handleEl: つまみ要素(pointerdownのターゲット), rowSelector: 行を表すCSSセレクタ,
 // onCommit(listEl, rowEl): ドロップ確定時に呼ばれ、並び替え後のリストを渡す
 function startRowDrag(e, handleEl, rowSelector, onCommit){
@@ -652,51 +661,66 @@ function startRowDrag(e, handleEl, rowSelector, onCommit){
   const el = handleEl.closest(rowSelector);
   if(!el) return;
   const listEl = el.parentElement;
-  let dragging=false, baseY=0;
+
+  try{ handleEl.setPointerCapture(e.pointerId); }catch(err){}
+
+  const startRect = el.getBoundingClientRect();
+  const grabOffsetY = e.clientY - startRect.top; // 行内のどこをつまんだか
+  const placeholder = document.createElement('div');
+  placeholder.className = 'drag-row-placeholder';
+  placeholder.style.height = startRect.height + 'px';
+
+  let dragging = false;
+
+  function beginDrag(){
+    dragging = true;
+    listEl.insertBefore(placeholder, el.nextSibling);
+    el.style.position = 'fixed';
+    el.style.left = startRect.left + 'px';
+    el.style.top = startRect.top + 'px';
+    el.style.width = startRect.width + 'px';
+    el.classList.add('dragging');
+    if(navigator.vibrate) navigator.vibrate(15);
+  }
 
   function onMove(ev){
-    if(!dragging){
-      dragging=true;
-      el.classList.add('dragging');
-      baseY=ev.clientY;
-      if(navigator.vibrate) navigator.vibrate(15);
-      return;
-    }
-    const dy = ev.clientY - baseY;
-    el.style.transform=`translateY(${dy}px)`;
-    const rect = el.getBoundingClientRect();
-    const centerY = rect.top+rect.height/2;
+    if(!dragging) beginDrag();
+    const newTop = ev.clientY - grabOffsetY;
+    el.style.top = newTop + 'px';
+    const centerY = newTop + startRect.height/2;
     const siblings=[...listEl.querySelectorAll(rowSelector)].filter(s=>s!==el);
+    let target = null;
     for(const sib of siblings){
-      const sRect=sib.getBoundingClientRect();
-      const sCenterY=sRect.top+sRect.height/2;
-      if(dy>0 && centerY>sCenterY){
-        listEl.insertBefore(el, sib.nextSibling);
-        baseY=ev.clientY; el.style.transform='translateY(0px)';
-        break;
-      } else if(dy<0 && centerY<sCenterY){
-        listEl.insertBefore(el, sib);
-        baseY=ev.clientY; el.style.transform='translateY(0px)';
-        break;
-      }
+      const sRect = sib.getBoundingClientRect();
+      if(centerY < sRect.top + sRect.height/2){ target = sib; break; }
+    }
+    if(target){
+      if(placeholder.nextSibling !== target) listEl.insertBefore(placeholder, target);
+    } else if(listEl.lastElementChild !== placeholder){
+      listEl.appendChild(placeholder);
     }
   }
   function onUp(){
     cleanup();
+    try{ handleEl.releasePointerCapture(e.pointerId); }catch(err){}
     if(dragging){
       el.classList.remove('dragging');
-      el.style.transform='';
+      el.style.position=''; el.style.left=''; el.style.top=''; el.style.width='';
+      listEl.insertBefore(el, placeholder);
+      placeholder.remove();
       onCommit(listEl, el);
+    } else if(placeholder.parentNode){
+      placeholder.remove();
     }
   }
   function cleanup(){
-    document.removeEventListener('pointermove', onMove);
-    document.removeEventListener('pointerup', onUp);
-    document.removeEventListener('pointercancel', onUp);
+    handleEl.removeEventListener('pointermove', onMove);
+    handleEl.removeEventListener('pointerup', onUp);
+    handleEl.removeEventListener('pointercancel', onUp);
   }
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
-  document.addEventListener('pointercancel', onUp);
+  handleEl.addEventListener('pointermove', onMove);
+  handleEl.addEventListener('pointerup', onUp);
+  handleEl.addEventListener('pointercancel', onUp);
 }
 
 async function commitMenuOrder(cat, listEl){
