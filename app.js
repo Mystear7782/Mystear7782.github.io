@@ -1,8 +1,11 @@
 // ===== STATE =====
 // データ構造: sessions[menuId][sessionId] = { date:'YYYY-MM-DD', sets:[{w,r}] }
+// フェーズ2移行により、sessionsはlocalStorage(gl_sessions)を経由せずSupabase
+// (workout_sessions/sets/cardio_logs)のみに保存する（体重ログ・食事記録と同じ方式）。
+// 起動時はいったん空で初期化し、loadSessionsFromSupabase()で読み込む。
 const S = {
   menus:    JSON.parse(localStorage.getItem('gl_menus')    || '[]'),
-  sessions: JSON.parse(localStorage.getItem('gl_sessions') || '{}'),
+  sessions: {},
   menuSets: JSON.parse(localStorage.getItem('gl_menusets') || '[]'),
   menu: null, menuSet: null, sessionId: null, editingSetIdx: null, showArchived: false,
   fromCalendar: false, // カレンダーから遷移したかどうか
@@ -12,38 +15,8 @@ const S = {
 
 const persist = () => {
   localStorage.setItem('gl_menus',    JSON.stringify(S.menus));
-  localStorage.setItem('gl_sessions', JSON.stringify(S.sessions));
   localStorage.setItem('gl_menusets', JSON.stringify(S.menuSets));
 };
-
-// 旧形式(gl_history)からの自動マイグレーション
-(function migrate() {
-  const old = localStorage.getItem('gl_history');
-  if (!old) return;
-  try {
-    const hist = JSON.parse(old);
-    for (const [menuId, dateMap] of Object.entries(hist)) {
-      if (!S.sessions[menuId]) S.sessions[menuId] = {};
-      for (const [date, sets] of Object.entries(dateMap)) {
-        const sid = 'sess_migrated_' + menuId.slice(-6) + '_' + date;
-        if (!S.sessions[menuId][sid]) S.sessions[menuId][sid] = { date, time:'00:00', sets };
-      }
-    }
-    localStorage.removeItem('gl_history');
-    persist();
-  } catch(e) {}
-})();
-
-// B-05: 既存セッションにtimeフィールドがなければ'00:00'でマイグレーション
-(function migrateTime() {
-  let changed = false;
-  for (const sessMap of Object.values(S.sessions)) {
-    for (const sess of Object.values(sessMap)) {
-      if (sess.time === undefined) { sess.time = '00:00'; changed = true; }
-    }
-  }
-  if (changed) persist();
-})();
 
 // ===== UTILS =====
 const orm = (w,r) => r===1 ? w : +(w*(1+r/40)).toFixed(1);
@@ -97,6 +70,35 @@ function menuStats(menuId) {
     if(!lastDate||sess.date>lastDate) lastDate=sess.date;
   }
   return {maxOrm, maxVol, lastDate, isCardio:false};
+}
+
+// ===== セッション/セット/有酸素記録（Supabase直接、localStorage非経由） =====
+// get_my_sessions_full() RPCの1行を、既存の描画コード(renderDetail/menuStats/
+// カレンダー/分析/CSV)がそのまま扱えるS.sessions[menuId][sessionId]形状に変換する。
+// isCardioMenu判定にS.menusを使うため、必ずloadExercisesFromSupabase()の後に呼ぶこと。
+async function loadSessionsFromSupabase() {
+  try {
+    const rows = await SupaClient.sessions.listFull();
+    const sessions = {};
+    for (const row of rows) {
+      const menu = S.menus.find(m => m.id === row.exercise_id);
+      if (!sessions[row.exercise_id]) sessions[row.exercise_id] = {};
+      const entry = { date: row.session_date, time: row.session_time || '00:00' };
+      if (isCardioMenu(menu)) {
+        const c = row.cardio || {};
+        entry.cardio = {
+          time: c.time ?? null, dist: c.dist ?? null, cal: c.cal ?? null,
+          hr: c.hr ?? null, maxSpd: c.maxSpd ?? null, avgSpd: c.avgSpd ?? null,
+        };
+      } else {
+        entry.sets = (row.sets || []).map(s => ({ id: s.id, w: s.w, r: s.r }));
+      }
+      sessions[row.exercise_id][row.session_id] = entry;
+    }
+    S.sessions = sessions;
+  } catch (e) {
+    toast('トレーニング記録の取得に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+  }
 }
 
 // ===== 体重ログ（Supabase直接、localStorage非経由） =====
@@ -776,10 +778,15 @@ function closeEditMenu() {
 }
 
 // ===== DELETE SESSION =====
-function deleteSession(sessId) {
+async function deleteSession(sessId) {
   if(!confirm('このセッションを削除しますか？\n⚠️ この操作は取り消せません。')) return;
+  try {
+    await SupaClient.sessions.deleteSession(sessId);
+  } catch(e) {
+    toast('削除に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return;
+  }
   delete S.sessions[S.menu.id][sessId];
-  persist();
   toast('セッションを削除しました');
   renderDetail();
 }
@@ -923,20 +930,24 @@ function deleteMenuSet(setId) {
 }
 
 // ===== SET EDIT =====
-function openSetEdit(sid){
+async function openSetEdit(sid){
   if(sid){
     S.sessionId=sid;
   } else {
-    const newId='sess_'+Date.now();
-    if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
     // 有酸素は cardio オブジェクト、筋トレは sets 配列で初期化
     // time: 新規セッション作成時点の現在時刻を自動セット（手動で変更も可能）
-    const init = isCardioMenu(S.menu)
-      ? {date:today(), time:nowTime(), cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
-      : {date:today(), time:nowTime(), sets:[]};
-    S.sessions[S.menu.id][newId]=init;
-    persist();
-    S.sessionId=newId;
+    try {
+      const created = await SupaClient.sessions.createSession(S.menu.id, today(), nowTime());
+      const init = isCardioMenu(S.menu)
+        ? {date:created.session_date, time:created.session_time, cardio:{time:null,dist:null,cal:null,hr:null,maxSpd:null,avgSpd:null}}
+        : {date:created.session_date, time:created.session_time, sets:[]};
+      if(!S.sessions[S.menu.id]) S.sessions[S.menu.id]={};
+      S.sessions[S.menu.id][created.id]=init;
+      S.sessionId=created.id;
+    } catch(e) {
+      toast('セッションの作成に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+      return;
+    }
   }
   S.editingSetIdx=null;
   S.fromCalendar=false;
@@ -1065,8 +1076,9 @@ function renderSetEdit(){
 }
 
 // ===== CARDIO =====
+// 入力のたびに呼ばれるが、ここではローカルのS状態を更新するのみでSupabaseへは送信しない
+// （キー入力ごとに通信すると負荷が高いため）。実際の保存はsaveCardioFinal()で行う。
 function saveCardio(){
-  // 入力のたびにリアルタイム保存
   const sess=S.sessions[S.menu.id][S.sessionId];
   if(!sess.cardio) sess.cardio={};
   // 空文字・0以下はnull扱い（0分・0km等は無効値として扱う）
@@ -1079,19 +1091,25 @@ function saveCardio(){
     maxSpd: v('c-maxspd'),
     avgSpd: v('c-avgspd'),
   };
-  persist();
   renderCardioPreview();
 }
 
-function saveCardioFinal(){
+async function saveCardioFinal(){
   saveCardio();
-  const c=S.sessions[S.menu.id][S.sessionId].cardio||{};
+  const sess=S.sessions[S.menu.id][S.sessionId];
+  const c=sess.cardio||{};
   const missing=[];
   if(c.time==null)  missing.push('合計時間');
   if(c.dist==null)  missing.push('合計距離');
   if(c.cal==null)   missing.push('消費カロリー');
   if(c.hr==null)    missing.push('平均心拍数');
   if(missing.length){ toast(`未入力項目: ${missing.join('・')}`); return; }
+  try {
+    await SupaClient.sessions.saveCardio(S.sessionId, c);
+  } catch(e) {
+    toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return;
+  }
   toast('記録を保存しました');
   // F-04: カレンダー経由の場合は画面を移動しない（set-editにとどまる）
   if(!S.fromCalendar) go('menu-detail');
@@ -1121,13 +1139,21 @@ function renderCardioPreview(){
 }
 
 // ===== SET EDIT (筋トレ) =====
-function updateSessionDateTime(){
+async function updateSessionDateTime(){
   if(!S.sessionId) return;
+  const sess = S.sessions[S.menu.id][S.sessionId];
   const date = document.getElementById('sess-date')?.value;
   const time = document.getElementById('sess-time')?.value;
-  if(date) S.sessions[S.menu.id][S.sessionId].date=date;
-  if(time!==undefined) S.sessions[S.menu.id][S.sessionId].time=time||'00:00';
-  persist();
+  const newDate = date || sess.date;
+  const newTime = time!==undefined ? (time||'00:00') : sess.time;
+  try {
+    await SupaClient.sessions.updateSessionDateTime(S.sessionId, newDate, newTime);
+  } catch(e) {
+    toast('日時の更新に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return;
+  }
+  sess.date = newDate;
+  sess.time = newTime;
 }
 
 function updatePreview(){
@@ -1146,24 +1172,32 @@ function updatePreview(){
   }
 }
 
-function commitSet(){
+async function commitSet(){
   const isBodyweight = S.menu && S.menu.type === '自重運動';
   const wEl = document.getElementById('inp-w');
   const w = isBodyweight ? 0 : parseFloat(wEl ? wEl.value : '');
   const r = parseInt(document.getElementById('inp-r').value);
   if(isBodyweight ? !r : (!w||!r)) return;
   const sets=S.sessions[S.menu.id][S.sessionId].sets;
-  if(S.editingSetIdx!==null){
-    sets[S.editingSetIdx]={w,r};
-    S.editingSetIdx=null;
-    document.getElementById('form-label').textContent='セットを追加';
-    document.getElementById('btn-add-set').textContent='セットを追加';
-    toast('セットを更新しました');
-  } else {
-    sets.push({w,r});
-    toast('セットを追加しました');
+  try {
+    if(S.editingSetIdx!==null){
+      const target = sets[S.editingSetIdx];
+      await SupaClient.sessions.updateSet(target.id, w, r);
+      target.w=w; target.r=r;
+      S.editingSetIdx=null;
+      document.getElementById('form-label').textContent='セットを追加';
+      document.getElementById('btn-add-set').textContent='セットを追加';
+      toast('セットを更新しました');
+    } else {
+      const setNo = sets.length+1;
+      const created = await SupaClient.sessions.addSet(S.sessionId, setNo, w, r);
+      sets.push({id:created.id, w, r});
+      toast('セットを追加しました');
+    }
+  } catch(e) {
+    toast('保存に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return;
   }
-  persist();
   if(wEl) wEl.value='';
   document.getElementById('inp-r').value='';
   document.getElementById('orm-prev').textContent=isBodyweight?'回数を入力してください':'重量と回数を入力すると 1RM を表示します';
@@ -1200,11 +1234,19 @@ function cancelEdit(){
   renderSets();
 }
 
-function deleteSet(idx){
+async function deleteSet(idx){
   if(!confirm(`セット${idx+1}を削除しますか？`)) return;
+  const sets = S.sessions[S.menu.id][S.sessionId].sets;
+  const target = sets[idx];
+  try {
+    await SupaClient.sessions.deleteSet(target.id);
+  } catch(e) {
+    toast('削除に失敗しました: ' + ((e && e.message) ? e.message : String(e)));
+    return;
+  }
   if(S.editingSetIdx===idx) cancelEdit();
-  S.sessions[S.menu.id][S.sessionId].sets.splice(idx,1);
-  persist(); updateSetCountLabel(); renderSets(); toast('セットを削除しました');
+  sets.splice(idx,1);
+  updateSetCountLabel(); renderSets(); toast('セットを削除しました');
 }
 
 function updateSetCountLabel(){
@@ -1758,22 +1800,30 @@ function parseCSV(text) {
 }
 
 // ④ インポート：session_id空欄時は日付+メニューIDで自動発行
+// フェーズ2移行により、セッション/セット/有酸素データはSupabaseのみに保存されるため、
+// インポート時も1行ごとにSupabaseへ書き込む（メニュー自動登録も同様にSupabaseへ同期する）。
 function importCSV(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     const text = e.target.result;
     try {
       const rows = parseCSV(text);
       if (rows.length < 2) { showImportResult('err','データが空です'); return; }
       const header = rows[0].map(h=>h.toLowerCase().replace(/"/g,'').trim());
       const isCardio = header.includes('time_min') || header.includes('dist_km');
-      let imported=0, skipped=0, menuCreated=0;
+      let imported=0, skipped=0, menuCreated=0, errors=0;
       const col = k => header.indexOf(k);
 
       // ④ session_id空欄時の自動割当: "日付_メニューID" をキーにセッションを一意化
-      const autoSessMap = {}; // key: `${menuId}_${date}` → sessId
+      const autoSessMap = {}; // key: `${menuId}_${date}` → CSV側の仮セッションキー
+
+      // sessIdMap: CSVのsession_id(または上記の自動割当キー)→Supabase側の実セッションUUID。
+      // S.sessions側の「既存データと重複しているか」の判定とは別物として管理する
+      // （混同すると、新規の複数セット・セッションの2行目以降が別セッションとして
+      // 作成されてしまう。CSVのsessIdはSupabase発行のUUIDとは一致しないため）。
+      const sessIdMap = {};
 
       for (let i=1; i<rows.length; i++) {
         const r = rows[i];
@@ -1782,61 +1832,79 @@ function importCSV(input) {
         const category = r[col('category')]?.trim();
         const date     = r[col('date')]?.trim();
         const rawSessId = col('session_id') >= 0 ? r[col('session_id')]?.trim() : '';
-        // ③ session_time列（workout_sessions.session_time相当）。旧形式のCSV（列なし）はundefinedのまま
-        // → 後続のmigrateTime()等で'00:00'が補完される。
-        const sessionTime = col('session_time') >= 0 && r[col('session_time')] ? r[col('session_time')].trim() : undefined;
+        // ③ session_time列（workout_sessions.session_time相当）。旧形式のCSV（列なし）は未指定として扱う
+        const sessionTime = col('session_time') >= 0 && r[col('session_time')] ? r[col('session_time')].trim() : '00:00';
         if (!menuName||!category||!date) continue;
 
-        // ③ メニュー存在確認・アプリ未登録なら自動新規登録
-        // NOTE: 段階移行フェーズ1時点ではCSV画面は未移行のため、ここで新規登録されるメニューは
-        // ローカル(localStorage)のみに保存されSupabaseには同期されない。CSV画面の移行時に対応予定。
+        // ③ メニュー存在確認・アプリ未登録なら自動新規登録（Supabaseにも同期する）
         let menu = S.menus.find(m=>m.name===menuName&&m.category===category);
         if (!menu) {
           const type = isCardio ? '有酸素運動' : (col('type')>=0 ? r[col('type')]?.trim()||'マシン' : 'マシン');
-          menu = {id:'menu_imp_'+Date.now()+'_'+i, name:menuName, category, type, archived:false};
-          S.menus.push(menu);
+          const newMenu = {id:'menu_imp_'+Date.now()+'_'+i, name:menuName, category, type, archived:false};
+          try {
+            await SupaClient.exercises.insert(newMenu);
+          } catch(e) { errors++; continue; }
+          S.menus.push(newMenu);
+          menu = newMenu;
           menuCreated++;
         }
         if (!S.sessions[menu.id]) S.sessions[menu.id] = {};
 
-        // ④ session_id決定ロジック
-        let sessId = rawSessId;
-        if (!sessId) {
-          // 空欄の場合：同日同メニューを同一セッションにまとめる
+        // ④ session_id決定ロジック（CSV側の仮キー。空欄の場合は同日同メニューをまとめる）
+        let csvSessId = rawSessId;
+        if (!csvSessId) {
           const autoKey = `${menu.id}_${date}`;
           if (!autoSessMap[autoKey]) {
             autoSessMap[autoKey] = 'sess_imp_' + Date.now() + '_' + i;
           }
-          sessId = autoSessMap[autoKey];
+          csvSessId = autoSessMap[autoKey];
         }
 
         if (isCardio) {
-          // 有酸素：sessId重複はスキップ
-          if (S.sessions[menu.id][sessId]) { skipped++; continue; }
-          S.sessions[menu.id][sessId] = {
-            date,
-            time: sessionTime,
-            cardio: {
-              time:   r[col('time_min')]!==''    ? +r[col('time_min')]    : null,
-              dist:   r[col('dist_km')]!==''     ? +r[col('dist_km')]     : null,
-              cal:    r[col('cal_kcal')]!==''    ? +r[col('cal_kcal')]    : null,
-              hr:     r[col('hr_bpm')]!==''      ? +r[col('hr_bpm')]      : null,
-              maxSpd: col('max_spd_kmh')>=0&&r[col('max_spd_kmh')]!=='' ? +r[col('max_spd_kmh')] : null,
-              avgSpd: col('avg_spd_kmh')>=0&&r[col('avg_spd_kmh')]!=='' ? +r[col('avg_spd_kmh')] : null,
-            }
+          // 有酸素：csvSessIdが既存データ(S.sessions、＝過去に作成済みの実セッション)と
+          // 重複していたらスキップ。新規なら1セッション=1行としてSupabaseへ作成する。
+          if (S.sessions[menu.id][csvSessId]) { skipped++; continue; }
+          const cardio = {
+            time:   r[col('time_min')]!==''    ? +r[col('time_min')]    : null,
+            dist:   r[col('dist_km')]!==''     ? +r[col('dist_km')]     : null,
+            cal:    r[col('cal_kcal')]!==''    ? +r[col('cal_kcal')]    : null,
+            hr:     r[col('hr_bpm')]!==''      ? +r[col('hr_bpm')]      : null,
+            maxSpd: col('max_spd_kmh')>=0&&r[col('max_spd_kmh')]!=='' ? +r[col('max_spd_kmh')] : null,
+            avgSpd: col('avg_spd_kmh')>=0&&r[col('avg_spd_kmh')]!=='' ? +r[col('avg_spd_kmh')] : null,
           };
-          imported++;
+          try {
+            const created = await SupaClient.sessions.createSession(menu.id, date, sessionTime);
+            await SupaClient.sessions.saveCardio(created.id, cardio);
+            S.sessions[menu.id][created.id] = { date, time: sessionTime, cardio };
+            imported++;
+          } catch(e) { errors++; }
         } else {
-          // 筋トレ：同sessIdで複数行 → setsに追加（重複sessIdはINSERT継続）
-          if (!S.sessions[menu.id][sessId]) {
-            S.sessions[menu.id][sessId] = {date, time: sessionTime, sets:[]};
-          }
+          // 筋トレ：同csvSessIdで複数行 → 同一Supabaseセッションにセットを追加していく
+          // （重複sessIdは元の仕様通りINSERT継続＝既存セッションへセットを追加する）
           const w   = parseFloat(r[col('weight_kg')]);
           const rep = parseInt(r[col('reps')]);
-          if (!isNaN(w) && !isNaN(rep)) {
-            S.sessions[menu.id][sessId].sets.push({w, r:rep});
-            imported++;
+          if (isNaN(w) || isNaN(rep)) continue;
+
+          if (!sessIdMap[csvSessId]) {
+            if (S.sessions[menu.id][csvSessId]) {
+              // csvSessIdが既存の実セッションIDと一致 → そのセッションへ追記
+              sessIdMap[csvSessId] = csvSessId;
+            } else {
+              try {
+                const created = await SupaClient.sessions.createSession(menu.id, date, sessionTime);
+                sessIdMap[csvSessId] = created.id;
+                S.sessions[menu.id][created.id] = { date, time: sessionTime, sets: [] };
+              } catch(e) { errors++; continue; }
+            }
           }
+          const realId = sessIdMap[csvSessId];
+          const sess = S.sessions[menu.id][realId];
+          try {
+            const setNo = sess.sets.length + 1;
+            const created = await SupaClient.sessions.addSet(realId, setNo, w, rep);
+            sess.sets.push({id:created.id, w, r:rep});
+            imported++;
+          } catch(e) { errors++; }
         }
       }
 
@@ -1844,7 +1912,8 @@ function importCSV(input) {
       const msgs = [`${imported}件をインポートしました`];
       if (menuCreated) msgs.push(`未登録メニュー ${menuCreated}件を新規登録`);
       if (skipped)     msgs.push(`重複 ${skipped}件をスキップ`);
-      showImportResult('ok', msgs.join('\n'));
+      if (errors)      msgs.push(`${errors}件でエラーが発生しました（通信を確認してください）`);
+      showImportResult(errors ? 'err' : 'ok', msgs.join('\n'));
     } catch(err) {
       showImportResult('err', 'CSVの読み込みに失敗しました\n'+err.message);
     }
@@ -1955,6 +2024,77 @@ async function importRecoveredSessions() {
   }
 }
 
+// gl_sessions → Supabase移行用（一時的、B-04c）: localStorageに残っているgl_sessions
+// （筋トレ・有酸素のセッション/セット記録）を1回だけSupabase(workout_sessions/sets/cardio_logs)
+// へ書き込む。対象のexerciseId(menu.id)が既にexercisesテーブルに存在すること（フェーズ1の
+// メニュー移行が完了していること）が前提で、存在しないmenuIdの記録はスキップする。
+// 二重実行防止のためlocalStorageにフラグ(gl_sessions_migrated)を立てるが、再実行された場合も
+// 確認ダイアログを挟むだけで、重複防止のガードは行わない（再実行するとセッションが重複作成される）。
+// 移行完了後、この関数とindex.html側の対応ブロックは削除して良い（B-15）。
+async function migrateLocalSessionsToSupabase() {
+  const el = document.getElementById('migrate-sessions-out');
+  if (localStorage.getItem('gl_sessions_migrated')) {
+    if (!confirm('既に移行済みとして記録されています。再実行しますか？\n（重複判定はされず、再度セッションが作成されます）')) return;
+  } else if (!confirm('端末内のgl_sessions（セッション記録）をSupabaseへ移行します。\nこの操作は取り消せません。実行しますか？')) {
+    return;
+  }
+  if (el) { el.style.display = 'block'; el.value = '実行中...'; }
+  const raw = localStorage.getItem('gl_sessions');
+  if (!raw) {
+    const msg = 'localStorageにgl_sessionsが見つかりません（既に移行済みか、別端末の可能性があります）';
+    if (el) el.value = msg;
+    toast(msg);
+    return;
+  }
+  let data;
+  try { data = JSON.parse(raw); }
+  catch (e) {
+    const msg = 'gl_sessionsのJSON解析に失敗しました: ' + e.message;
+    if (el) el.value = msg;
+    toast(msg);
+    return;
+  }
+
+  let sessionsOk = 0, sessionsSkip = 0, setsOk = 0, cardioOk = 0;
+  const errors = [];
+  for (const [menuId, sessMap] of Object.entries(data)) {
+    const menu = S.menus.find(m => m.id === menuId);
+    if (!menu) {
+      sessionsSkip += Object.keys(sessMap).length;
+      errors.push(`menu未検出のためスキップ: ${menuId}（${Object.keys(sessMap).length}件）`);
+      continue;
+    }
+    for (const [oldSessId, sess] of Object.entries(sessMap)) {
+      try {
+        const created = await SupaClient.sessions.createSession(menuId, sess.date, sess.time || '00:00');
+        sessionsOk++;
+        if (isCardioMenu(menu)) {
+          if (sess.cardio) {
+            await SupaClient.sessions.saveCardio(created.id, sess.cardio);
+            cardioOk++;
+          }
+        } else {
+          let setNo = 1;
+          for (const s of (sess.sets || [])) {
+            await SupaClient.sessions.addSet(created.id, setNo++, s.w, s.r);
+            setsOk++;
+          }
+        }
+      } catch (e) {
+        errors.push(`${menuId}/${oldSessId}: ${(e && e.message) ? e.message : String(e)}`);
+      }
+    }
+  }
+
+  localStorage.setItem('gl_sessions_migrated', '1');
+  await loadSessionsFromSupabase();
+  const summary = `移行完了\nセッション作成: ${sessionsOk}件（menu未検出スキップ: ${sessionsSkip}件）\nセット: ${setsOk}件\n有酸素データ: ${cardioOk}件\nエラー: ${errors.length}件` +
+    (errors.length ? '\n' + errors.slice(0, 20).join('\n') : '');
+  if (el) el.value = summary;
+  toast(`移行完了: セッション${sessionsOk}件（エラー${errors.length}件）`);
+  renderList();
+}
+
 function showImportResult(type, msg) {
   const el = document.getElementById('import-result');
   if (!el) return;
@@ -1996,6 +2136,7 @@ async function handleLogin() {
     await SupaClient.auth.signInWithPassword(email, password);
     hideAuthGate();
     await loadExercisesFromSupabase();
+    await loadSessionsFromSupabase();
     renderList();
   } catch (e) {
     // デバッグのため実際のエラーメッセージも表示する（原因切り分け用、後で簡潔なメッセージに戻す）
@@ -2036,6 +2177,7 @@ async function boot() {
   }
   hideAuthGate();
   await loadExercisesFromSupabase();
+  await loadSessionsFromSupabase();
   renderList();
 }
 boot();

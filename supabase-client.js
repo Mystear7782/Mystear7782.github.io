@@ -156,4 +156,68 @@ const SupaMeals = {
   },
 };
 
-window.SupaClient = { auth: SupaAuth, exercises: SupaExercises, bodyWeight: SupaBodyWeight, meals: SupaMeals };
+// ===== workout_sessions / sets / cardio_logs（セッション・セット記録） =====
+const SupaSessions = {
+  // 同上の理由によりRPC関数(get_my_sessions_full)経由で読み取る。
+  // exercise_idごとのセッション一覧を、セット配列/有酸素データを含めた形でまとめて返す。
+  async listFull() {
+    const { data, error } = await getClient().rpc('get_my_sessions_full');
+    if (error) throw error;
+    return data;
+  },
+  async createSession(exerciseId, date, time) {
+    const { data, error } = await getClient()
+      .from('workout_sessions')
+      .insert({ exercise_id: exerciseId, session_date: date, session_time: time })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateSessionDateTime(sessionId, date, time) {
+    const { error } = await getClient()
+      .from('workout_sessions')
+      .update({ session_date: date, session_time: time })
+      .eq('id', sessionId);
+    if (error) throw error;
+  },
+  async deleteSession(sessionId) {
+    // workout_sessions削除時、外部キーのON DELETE CASCADEによりsets/cardio_logsの
+    // 関連行も自動削除される（個別のdelete呼び出しは不要）。
+    const { error } = await getClient().from('workout_sessions').delete().eq('id', sessionId);
+    if (error) throw error;
+  },
+  async addSet(sessionId, setNo, w, r) {
+    const { data, error } = await getClient()
+      .from('sets')
+      .insert({ session_id: sessionId, set_no: setNo, weight_kg: w, reps: r })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  async updateSet(setId, w, r) {
+    const { error } = await getClient().from('sets').update({ weight_kg: w, reps: r }).eq('id', setId);
+    if (error) throw error;
+  },
+  async deleteSet(setId) {
+    const { error } = await getClient().from('sets').delete().eq('id', setId);
+    if (error) throw error;
+  },
+  // cardio_logsはsession_idを主キーとして1行のみ持つため、既存行があれば更新・
+  // なければ新規作成するupsertを使う（初回保存時点では行が存在しないため）。
+  async saveCardio(sessionId, c) {
+    const { error } = await getClient().from('cardio_logs').upsert({
+      session_id: sessionId,
+      time_min: c.time,
+      dist_km: c.dist,
+      cal_kcal: c.cal,
+      hr_bpm: c.hr,
+      max_spd_kmh: c.maxSpd,
+      avg_spd_kmh: c.avgSpd,
+    }, { onConflict: 'session_id' });
+    if (error) throw error;
+  },
+};
+
+window.SupaClient = { auth: SupaAuth, exercises: SupaExercises, bodyWeight: SupaBodyWeight, meals: SupaMeals, sessions: SupaSessions };
