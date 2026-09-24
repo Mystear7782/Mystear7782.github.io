@@ -39,13 +39,12 @@ input,select{font-family:var(--font)}
 #app{height:100%;display:flex;flex-direction:column}
 
 /* HEADER */
-#header{height:var(--header-h);background:var(--nav-bg);display:flex;align-items:center;gap:10px;padding:0 14px;flex-shrink:0;z-index:20;box-shadow:0 1px 0 rgba(255,255,255,.05)}
-#hamburger{width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:var(--r-xs);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);flex-shrink:0;transition:background .2s}
+/* viewport-fit=cover によりコンテンツがノッチ/ステータスバー領域まで伸びるため、
+   ヘッダー上部にsafe-area-inset-top分のパディングを確保してステータスバーとの重なりを防ぐ */
+#header{height:calc(var(--header-h) + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);background:var(--nav-bg);display:flex;align-items:center;gap:10px;padding-left:14px;padding-right:14px;flex-shrink:0;z-index:20;box-shadow:0 1px 0 rgba(255,255,255,.05)}
+#hamburger{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-xs);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#c9d1e0;flex-shrink:0;transition:background .2s}
 #hamburger:hover{background:rgba(255,255,255,.1)}
-#hamburger span{width:16px;height:1.5px;background:#c9d1e0;border-radius:2px;display:block;transition:all .25s}
-#hamburger.open span:nth-child(1){transform:rotate(45deg) translate(4.5px,4.5px)}
-#hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0)}
-#hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(4.5px,-4.5px)}
+#hamburger svg{flex-shrink:0}
 #page-title{font-size:15px;font-weight:700;color:#fff;flex:1;letter-spacing:.2px}
 
 /* SIDEBAR */
@@ -53,7 +52,7 @@ input,select{font-family:var(--font)}
 #overlay.show{opacity:1;pointer-events:all}
 #sidebar{position:fixed;top:0;left:0;height:100%;width:var(--sw);background:var(--nav-bg);z-index:50;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow)}
 #sidebar.show{transform:translateX(0)}
-.sb-head{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-head{padding:calc(22px + env(safe-area-inset-top)) 18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
 .sb-logo{font-size:20px;font-weight:700;color:#fff}
 .sb-logo span{color:var(--nav-active)}
 .sb-tagline{font-size:11px;color:#4a5270;margin-top:2px;letter-spacing:.5px}
@@ -360,8 +359,11 @@ input,select{font-family:var(--font)}
 .btn-action.edit-menu{border-color:var(--accent);color:var(--accent-t);background:var(--accent-bg)}
 
 /* TOAST */
-#toast{position:fixed;bottom:calc(var(--footer-h) + env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%) translateY(70px);background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
-#toast.show{transform:translateX(-50%) translateY(0)}
+/* 非表示時はtransformでの位置ずらしだけでなくopacity:0でも隠す。
+   フッターナビ追加に伴いbottom位置が引き上がり、位置ずらしだけでは
+   非表示時にフッター中央付近とtoastの丸い背景が重なって見えてしまうため */
+#toast{position:fixed;bottom:calc(var(--footer-h) + env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%) translateY(70px);opacity:0;background:var(--nav-bg);color:#e8ecf5;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;border:1px solid rgba(255,255,255,.08)}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -396,7 +398,7 @@ input,select{font-family:var(--font)}
 .dash-recent-val{font-size:12px;color:var(--text2);white-space:nowrap}
 
 /* LOADING UI */
-#top-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:900;background:transparent;
+#top-progress{position:fixed;top:env(safe-area-inset-top);left:0;right:0;height:2px;z-index:900;background:transparent;
   overflow:hidden;pointer-events:none;opacity:0;transition:opacity .2s}
 #top-progress.show{opacity:1}
 #top-progress .bar{position:absolute;top:0;left:0;height:100%;width:35%;background:var(--accent);
