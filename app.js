@@ -415,11 +415,11 @@ const closeSidebar = () => {
 // ===== NAVIGATION =====
 const TITLES = {'dashboard':'ダッシュボード','add-menu':'メニューの追加','menu-list':'メニュー一覧','menu-detail':'メニュー詳細','menuset-list':'メニューセット','menuset-detail':'セット詳細','set-edit':'セット記録','csv':'CSV出力 / 入力','analysis':'メニュー分析','analysis-detail':'分析詳細','rm':'RM換算表','weight':'体重ログ','meal':'食事記録','config':'設定'};
 // フッターナビのどのタブを「現在地」として光らせるか。ここに無いページ
-// (メニューセット/RM換算表/CSV/設定など)は「その他」経由のためどのタブも点灯しない。
+// (メニュー分析/RM換算表/CSV/設定など)は左上の設定アイコン(サイドバー)経由のためどのタブも点灯しない。
 const FOOTER_TAB_MAP = {
   'dashboard':'dashboard',
   'menu-list':'record','menu-detail':'record','add-menu':'record','set-edit':'record',
-  'analysis':'analysis','analysis-detail':'analysis',
+  'menuset-list':'menuset','menuset-detail':'menuset',
   'weight':'body','meal':'body',
 };
 function go(page) {
