@@ -1,4 +1,4 @@
-const CACHE = 'gymlog-v4';
+const CACHE = 'gymlog-v5';
 const ASSETS = ['./', './index.html', './app.js', './style.css', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -16,13 +16,15 @@ self.addEventListener('activate', e => {
   );
 });
 
-// HTMLとJSは常にネットワーク優先、オフライン時のみキャッシュ
-// フォント等の外部リソースはキャッシュ優先
+// HTML/JS/CSSは常にネットワーク優先、オフライン時のみキャッシュ
+// （CSSも開発中に頻繁に更新されるため、cssをキャッシュ優先にすると
+// 更新後もブラウザが古いスタイルを表示し続けるバグの原因になっていた）
+// フォント等の外部リソースのみキャッシュ優先
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   const isLocal = url.origin === self.location.origin;
   const isPage = isLocal && (
-    /\.(html|js)$/.test(url.pathname) ||
+    /\.(html|js|css)$/.test(url.pathname) ||
     url.pathname === '/' ||
     url.pathname.endsWith('/')
   );
