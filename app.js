@@ -1401,6 +1401,15 @@ async function updateSessionDateTime(){
   const time = document.getElementById('sess-time')?.value;
   const newDate = date || sess.date;
   const newTime = time!==undefined ? (time||'00:00') : sess.time;
+  // pending(未作成)セッションの場合、サーバー側にまだ行が無い(IDもUUID形式ではない)ため
+  // 通信は行わず、ローカルの値だけを更新する。実際の作成(ensureRealSession)時に
+  // この値がそのまま使われる。以前はここでサーバー呼び出しに失敗してcatchでreturnして
+  // しまい、ローカルの日時が更新されないまま最初のセットが保存されていた。
+  if(sess.pending){
+    sess.date = newDate;
+    sess.time = newTime;
+    return;
+  }
   try {
     await SupaClient.sessions.updateSessionDateTime(S.sessionId, newDate, newTime);
   } catch(e) {
@@ -2111,6 +2120,9 @@ function importCSV(input) {
       // （混同すると、新規の複数セット・セッションの2行目以降が別セッションとして
       // 作成されてしまう。CSVのsessIdはSupabase発行のUUIDとは一致しないため）。
       const sessIdMap = {};
+      // ②(A-2)修正: csvSessIdが既存の実セッションと一致し「再インポート」と
+      // 判定してスキップした場合に、同じcsvSessIdを持つ以降の行も続けてスキップするためのSet
+      const skippedSessIds = new Set();
 
       for (let i=1; i<rows.length; i++) {
         const r = rows[i];
@@ -2166,23 +2178,29 @@ function importCSV(input) {
             imported++;
           } catch(e) { errors++; }
         } else {
-          // 筋トレ：同csvSessIdで複数行 → 同一Supabaseセッションにセットを追加していく
-          // （重複sessIdは元の仕様通りINSERT継続＝既存セッションへセットを追加する）
+          // 筋トレ：同csvSessIdで複数行 → 同一Supabaseセッションにセットを追加していく。
+          // A-2修正: csvSessIdが既存の実セッションと一致する場合（＝エクスポートした
+          // ファイルをそのまま再インポートした場合）は、そのセッションに属する行を
+          // すべてスキップする（有酸素と同じ扱いに統一）。以前はスキップせず追記し
+          // 続けていたため、再インポートのたびに全セットが重複登録されていた。
           const w   = parseFloat(r[col('weight_kg')]);
           const rep = parseInt(r[col('reps')]);
           if (isNaN(w) || isNaN(rep)) continue;
 
+          if (skippedSessIds.has(csvSessId)) { skipped++; continue; }
+
           if (!sessIdMap[csvSessId]) {
             if (S.sessions[menu.id][csvSessId]) {
-              // csvSessIdが既存の実セッションIDと一致 → そのセッションへ追記
-              sessIdMap[csvSessId] = csvSessId;
-            } else {
-              try {
-                const created = await SupaClient.sessions.createSession(menu.id, date, sessionTime);
-                sessIdMap[csvSessId] = created.id;
-                S.sessions[menu.id][created.id] = { date, time: sessionTime, sets: [] };
-              } catch(e) { errors++; continue; }
+              // csvSessIdが既存の実セッションIDと一致 → このセッションの行は以後すべてスキップ
+              skippedSessIds.add(csvSessId);
+              skipped++;
+              continue;
             }
+            try {
+              const created = await SupaClient.sessions.createSession(menu.id, date, sessionTime);
+              sessIdMap[csvSessId] = created.id;
+              S.sessions[menu.id][created.id] = { date, time: sessionTime, sets: [] };
+            } catch(e) { errors++; continue; }
           }
           const realId = sessIdMap[csvSessId];
           const sess = S.sessions[menu.id][realId];

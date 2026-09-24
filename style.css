@@ -35,8 +35,10 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 /* iOSのスタンドアロンPWAでは height:100% が実際のビジュアルビューポートより
    小さく解決され、下部に余白ができることがあるため、対応ブラウザでは
-   動的ビューポート単位(dvh)で実際の高さに合わせる（非対応環境は100%のまま） */
-html,body{height:100%;height:100dvh;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+   動的ビューポート単位(dvh)で実際の高さに合わせる（非対応環境は100%のまま）。
+   さらに、dvhだけでも実際の表示領域とズレる環境が確認されたため、index.html内の
+   スクリプトでJS計測した実際の高さ(--real-vh)があればそれを最優先で使う。 */
+html,body{height:100%;height:100dvh;height:var(--real-vh, 100dvh);overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font-family:var(--font);cursor:pointer;border:none;background:none}
 input,select{font-family:var(--font)}
 #app{height:100%;display:flex;flex-direction:column}
