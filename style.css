@@ -33,7 +33,10 @@
   }
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+/* iOSのスタンドアロンPWAでは height:100% が実際のビジュアルビューポートより
+   小さく解決され、下部に余白ができることがあるため、対応ブラウザでは
+   動的ビューポート単位(dvh)で実際の高さに合わせる（非対応環境は100%のまま） */
+html,body{height:100%;height:100dvh;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button{font-family:var(--font);cursor:pointer;border:none;background:none}
 input,select{font-family:var(--font)}
 #app{height:100%;display:flex;flex-direction:column}
@@ -133,17 +136,24 @@ input,select{font-family:var(--font)}
 .group-name{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.6px;text-transform:uppercase}
 .group-cnt{margin-left:auto;font-size:11px;color:var(--text3);background:var(--bg3);padding:1px 8px;border-radius:20px;border:1px solid var(--border)}
 .menu-list{display:flex;flex-direction:column;gap:8px}
-.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.menu-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-xs);touch-action:pan-y;position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .menu-row:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateX(2px)}
-.menu-row.drag-armed{box-shadow:var(--shadow);transform:scale(1.02)}
 .menu-row.dragging{z-index:50;box-shadow:var(--shadow);opacity:.92;transition:none;touch-action:none}
-.menu-row.drag-placeholder{opacity:.35}
 .menu-row.archived{opacity:.6;border-style:dashed}
 .menu-row.archived:hover{border-color:var(--amber);transform:none}
 .menu-row-left{flex:1;min-width:0}
 .menu-row-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu-row-tags{display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap}
 .menu-row-right{text-align:right;flex-shrink:0}
+/* ドラッグ用つまみ。行本体の長押しはiOSでテキスト選択ポップアップと
+   競合するため、ここだけをtouch-action:noneにしてドラッグの起点にする */
+.menu-row-handle{flex-shrink:0;align-self:stretch;display:flex;align-items:center;justify-content:center;
+  width:34px;margin:-14px -2px -14px -16px;color:var(--text3);border-radius:var(--r-sm) 0 0 var(--r-sm);
+  touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+  cursor:grab;transition:background .15s,color .15s}
+.menu-row-handle:active{cursor:grabbing;color:var(--accent);background:var(--bg3)}
+.menu-row.dragging .menu-row-handle{color:var(--accent);background:var(--accent-bg)}
+.menu-row-handle svg{pointer-events:none;flex-shrink:0}
 .row-1rm{font-size:18px;font-weight:700;color:var(--accent)}
 .row-1rm-unit{font-size:11px;font-weight:400;color:var(--text3)}
 .row-1rm-label{font-size:10px;color:var(--text3)}

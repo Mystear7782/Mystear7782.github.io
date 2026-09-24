@@ -604,7 +604,8 @@ function renderList() {
     html+=`<div class="group-block"><div class="group-head"><div class="group-dot" style="background:${dotColor(cat)}"></div><div class="group-name">${cat}</div><div class="group-cnt">${items.length}件</div></div><div class="menu-list">`;
     for(const m of items){
       const st=menuStats(m.id);
-      html+=`<div class="menu-row${m.archived?' archived':''}" data-id="${m.id}" data-cat="${esc(cat)}" onclick="handleMenuRowClick(event,'${m.id}')" onpointerdown="onRowPointerDown(event,this)">
+      html+=`<div class="menu-row${m.archived?' archived':''}" data-id="${m.id}" data-cat="${esc(cat)}" onclick="handleMenuRowClick(event,'${m.id}')">
+        <div class="menu-row-handle" onpointerdown="startRowDrag(event,this,'.menu-row',(listEl,row)=>commitMenuOrder(row.dataset.cat,listEl))" onclick="event.stopPropagation()">${DRAG_HANDLE_SVG}</div>
         <div class="menu-row-left">
           <div class="menu-row-name">${esc(m.name)}</div>
           <div class="menu-row-tags">
@@ -628,73 +629,65 @@ function renderList() {
   }
   el.innerHTML=html;
 }
-// ===== MENU LIST: 長押しで並び替え =====
-let suppressNextClick = false;
-
+// ===== 並び替え =====
 function handleMenuRowClick(e, id){
-  if(suppressNextClick){ suppressNextClick=false; return; }
   openDetail(id);
 }
 
-function onRowPointerDown(e, el){
-  if(e.pointerType==='mouse' && e.button!==0) return;
-  const startX=e.clientX, startY=e.clientY;
-  let armed=false, dragging=false;
-  let baseY=0, curList=null, curCat=null;
+// 行の左端にある「つまみ(ハンドル)」アイコン。6点ドット。
+const DRAG_HANDLE_SVG = `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/></svg>`;
 
-  const longPressTimer = setTimeout(()=>{
-    armed=true;
-    el.classList.add('drag-armed');
-    if(navigator.vibrate) navigator.vibrate(25);
-  }, 2000);
+// 汎用: ドラッグハンドル起点の並び替え。
+// 行全体を長押しでドラッグ可能にすると、iOSでは標準のテキスト選択/コピー用
+// ポップアップ(虫眼鏡・選択メニュー)が起動してしまいドラッグと競合するため、
+// 行本体ではなく専用の小さな「つまみ」からのみドラッグを開始する方式にしている
+// (つまみはtouch-action:noneかつテキストを含まないため、iOS側のテキスト選択
+// ジェスチャーと衝突しない)。
+// handleEl: つまみ要素(pointerdownのターゲット), rowSelector: 行を表すCSSセレクタ,
+// onCommit(listEl, rowEl): ドロップ確定時に呼ばれ、並び替え後のリストを渡す
+function startRowDrag(e, handleEl, rowSelector, onCommit){
+  if(e.pointerType==='mouse' && e.button!==0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const el = handleEl.closest(rowSelector);
+  if(!el) return;
+  const listEl = el.parentElement;
+  let dragging=false, baseY=0;
 
   function onMove(ev){
-    if(!armed){
-      if(Math.abs(ev.clientX-startX)>10 || Math.abs(ev.clientY-startY)>10){
-        clearTimeout(longPressTimer);
-        cleanup();
-      }
-      return;
-    }
     if(!dragging){
       dragging=true;
-      el.classList.remove('drag-armed');
       el.classList.add('dragging');
-      curList=el.parentElement;
-      curCat=el.dataset.cat;
       baseY=ev.clientY;
+      if(navigator.vibrate) navigator.vibrate(15);
+      return;
     }
     const dy = ev.clientY - baseY;
     el.style.transform=`translateY(${dy}px)`;
     const rect = el.getBoundingClientRect();
     const centerY = rect.top+rect.height/2;
-    const siblings=[...curList.querySelectorAll('.menu-row')].filter(s=>s!==el);
+    const siblings=[...listEl.querySelectorAll(rowSelector)].filter(s=>s!==el);
     for(const sib of siblings){
       const sRect=sib.getBoundingClientRect();
       const sCenterY=sRect.top+sRect.height/2;
       if(dy>0 && centerY>sCenterY){
-        curList.insertBefore(el, sib.nextSibling);
+        listEl.insertBefore(el, sib.nextSibling);
         baseY=ev.clientY; el.style.transform='translateY(0px)';
         break;
       } else if(dy<0 && centerY<sCenterY){
-        curList.insertBefore(el, sib);
+        listEl.insertBefore(el, sib);
         baseY=ev.clientY; el.style.transform='translateY(0px)';
         break;
       }
     }
   }
   function onUp(){
-    clearTimeout(longPressTimer);
+    cleanup();
     if(dragging){
       el.classList.remove('dragging');
       el.style.transform='';
-      commitMenuOrder(curCat, curList);
-      suppressNextClick=true;
-      setTimeout(()=>{suppressNextClick=false;},50);
-    } else if(armed){
-      el.classList.remove('drag-armed');
+      onCommit(listEl, el);
     }
-    cleanup();
   }
   function cleanup(){
     document.removeEventListener('pointermove', onMove);
@@ -966,7 +959,8 @@ function renderMenuSetDetail() {
   const rowsHtml = memberMenus.length
     ? memberMenus.map(m => {
         const st = menuStats(m.id);
-        return `<div class="menu-row" onclick="openDetail('${m.id}','menuset-detail')">
+        return `<div class="menu-row" data-id="${m.id}" onclick="openDetail('${m.id}','menuset-detail')">
+          <div class="menu-row-handle" onpointerdown="startRowDrag(event,this,'.menu-row',(listEl)=>commitMenuSetOrder(listEl))" onclick="event.stopPropagation()">${DRAG_HANDLE_SVG}</div>
           <div class="menu-row-left">
             <div class="menu-row-name">${esc(m.name)}</div>
             <div class="menu-row-tags">
@@ -994,6 +988,17 @@ function renderMenuSetDetail() {
     </div>
     <div class="menu-list">${rowsHtml}</div>
   `;
+}
+
+// セット内の並び替え確定。メニューセットはSupabase未移行でlocalStorageのみの
+// ため、Supabase通信は不要でpersist()するだけでよい。
+function commitMenuSetOrder(listEl){
+  if(!S.menuSet) return;
+  const ids = [...listEl.querySelectorAll('.menu-row')].map(r=>r.dataset.id);
+  S.menuSet.menuIds = ids;
+  const set = S.menuSets.find(s=>s.id===S.menuSet.id);
+  if(set) set.menuIds = ids;
+  persist();
 }
 
 function populateMenuSetChecklist(selectedIds) {
