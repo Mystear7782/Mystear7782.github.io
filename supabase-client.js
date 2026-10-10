@@ -187,30 +187,26 @@ const SupaSessions = {
     const { error } = await getClient().from('workout_sessions').delete().eq('id', sessionId);
     if (error) throw error;
   },
-  // fallbackSetNo: 呼び出し元(app.js)が計算したローカルのセット件数ベースの値
-  // （途中のセット削除・再追加でapp.js側のローカル件数とDB側のset_noがずれている場合に
-  // 重複しうるため、できる限りDB側の実際の最大set_noを問い合わせて上書きする。
-  // 問い合わせに失敗した場合はfallbackSetNoをそのまま使う＝従来と同じ挙動に留まる）
-  async addSet(sessionId, fallbackSetNo, w, r) {
-    let setNo = fallbackSetNo;
-    try {
-      const { data: existing, error: qErr } = await getClient()
-        .from('sets')
-        .select('set_no')
-        .eq('session_id', sessionId)
-        .order('set_no', { ascending: false })
-        .limit(1);
-      if (!qErr && existing && existing.length) {
-        setNo = Math.max(fallbackSetNo, existing[0].set_no + 1);
-      }
-    } catch (e) { /* 取得できない場合はfallbackSetNoを使う */ }
-    const { data, error } = await getClient()
-      .from('sets')
-      .insert({ session_id: sessionId, set_no: setNo, weight_kg: w, reps: r })
-      .select()
-      .single();
+  // セット追加はrecord_set RPCに一本化（set_noの採番(max+1)とinsertを1トランザクションで行う。
+  // 以前は「最大set_noを読む→+1でinsert」を2回の通信で行っており、MCPなど他の書き込み元と
+  // 同時に動くとset_noが重複しうる状態だった）。
+  //   sessionId を指定: そのセッションの末尾にセットを追加する
+  //   sessionId なし   : exerciseId + date(+time) から記録先を決める。同じ種目・同じ日の
+  //                       セッションがあれば最新のものに、なければ新規作成する。
+  //                       newSession:true なら常に新しいセッションを作る
+  // 戻り値: {id, session_id, set_no, weight_kg, reps, session_created}
+  async recordSet({ sessionId = null, exerciseId = null, date = null, time = null, w, r, newSession = false }) {
+    const { data, error } = await getClient().rpc('record_set', {
+      p_exercise_id: exerciseId,
+      p_date: date,
+      p_time: time,
+      p_weight_kg: w,
+      p_reps: r,
+      p_new_session: !!newSession,
+      p_session_id: sessionId,
+    });
     if (error) throw error;
-    return data;
+    return Array.isArray(data) ? data[0] : data;
   },
   async updateSet(setId, w, r) {
     const { error } = await getClient().from('sets').update({ weight_kg: w, reps: r }).eq('id', setId);

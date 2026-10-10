@@ -1190,10 +1190,18 @@ async function ensureRealSession(){
   const sess = S.sessions[S.menu.id][S.sessionId];
   if(!sess || !sess.pending) return sess;
   const created = await SupaClient.sessions.createSession(S.menu.id, sess.date, sess.time);
+  return adoptRealSession(created.id);
+}
+
+// pending(仮)セッションを、サーバー側で作成済みの実セッション(realId)に差し替える。
+// S.sessions内のキーを仮ID→realIdに付け替え、S.sessionIdも更新して、pendingを外した
+// セッションを返す。
+function adoptRealSession(realId){
+  const sess = S.sessions[S.menu.id][S.sessionId];
   const { pending, ...rest } = sess;
   delete S.sessions[S.menu.id][S.sessionId];
-  S.sessions[S.menu.id][created.id] = rest;
-  S.sessionId = created.id;
+  S.sessions[S.menu.id][realId] = rest;
+  S.sessionId = realId;
   return rest;
 }
 
@@ -1445,10 +1453,9 @@ async function commitSet(){
   const btn = document.getElementById('btn-add-set');
   setBtnLoading(btn, true, '保存中...');
   try {
-    // A-6: 初回保存時に限り、ここで実セッションを作成する（pendingでなければ何もしない）
-    await ensureRealSession();
-    const sets=S.sessions[S.menu.id][S.sessionId].sets;
     if(S.editingSetIdx!==null){
+      await ensureRealSession();
+      const sets=S.sessions[S.menu.id][S.sessionId].sets;
       const target = sets[S.editingSetIdx];
       await SupaClient.sessions.updateSet(target.id, w, r);
       setBtnLoading(btn, false);
@@ -1458,8 +1465,18 @@ async function commitSet(){
       document.getElementById('btn-add-set').textContent='セットを追加';
       toast('セットを更新しました');
     } else {
-      const setNo = sets.length+1;
-      const created = await SupaClient.sessions.addSet(S.sessionId, setNo, w, r);
+      // セット追加は record_set RPC に一本化（set_noの採番とinsertを1トランザクションで行う）。
+      // 仮(pending)セッションの最初のセットは、セッション作成とセット追加を同じRPC呼び出しで
+      // 行う（newSession:true）。これにより「セッションだけ作られてセットが入らない」状態や、
+      // MCP側が同じ日に作ったセッションとの二重作成を避けられる。
+      // 2回目以降は、いま開いているセッションのidを明示して追加する。
+      const pendingSess = S.sessions[S.menu.id][S.sessionId];
+      const created = pendingSess.pending
+        ? await SupaClient.sessions.recordSet({
+            exerciseId: S.menu.id, date: pendingSess.date, time: pendingSess.time, w, r, newSession: true })
+        : await SupaClient.sessions.recordSet({ sessionId: S.sessionId, w, r });
+      if(pendingSess.pending) adoptRealSession(created.session_id);
+      const sets=S.sessions[S.menu.id][S.sessionId].sets;
       setBtnLoading(btn, false);
       sets.push({id:created.id, w, r});
       toast('セットを追加しました');
