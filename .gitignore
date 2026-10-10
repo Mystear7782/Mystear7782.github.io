@@ -13,3 +13,6 @@ supabase/functions/.env
 .env
 .env.*
 !.env.example
+
+# ローカル用JWT署名鍵（秘密鍵。絶対にコミットしない）
+supabase/signing_keys.json
