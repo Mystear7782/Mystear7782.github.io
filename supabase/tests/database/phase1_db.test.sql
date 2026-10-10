@@ -1,7 +1,7 @@
 -- フェーズ1のDB改修（制約・record_set・集計RPC・権限）のテスト。
 -- 実行: npx supabase test db   （ローカルSupabase。トランザクション内で実行され、最後にROLLBACKされる）
 begin;
-select plan(40);
+select plan(41);
 
 -- テスト用ユーザー2名（A: 操作する本人 / B: 他人）
 insert into auth.users (id, instance_id, aud, role, email)
@@ -12,6 +12,7 @@ values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-0000000
 select hasnt_function('public', 'debug_whoami', 'debug_whoami は存在しない');
 select hasnt_function('public', 'debug_exercises_count', 'debug_exercises_count は存在しない');
 select has_column('public', 'menu_set_items', 'position', 'menu_set_items.position がある');
+select has_column('public', 'sets', 'created_at', 'sets.created_at がある（フェーズ2: MCPの二重登録防止用）');
 select has_function('public', 'record_set', array['text','date','text','numeric','integer','boolean','uuid'], 'record_set が存在する');
 
 -- pgTAPの一時テーブルを、ロール切替後(authenticated/anon)でも使えるようにする
