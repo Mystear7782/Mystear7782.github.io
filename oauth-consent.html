@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- OAuth同意画面（Supabase Auth を OAuth 2.1 サーバーとして使う MCP 連携用）。
+     PWA本体(index.html / app.js)には依存しない単独ページ。PWAと同じオリジンに置くため、
+     supabase-js がlocalStorageに保存したPWAのログイン状態をそのまま使える。
+     inline scriptは使わない（CSPで script-src 'self' と SRI付きCDNのみ許可）。 -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://cdn.jsdelivr.net;
+  style-src 'self' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com;
+  img-src 'self' data:;
+  connect-src 'self' https://swncmbsamxoyjeojwbyc.supabase.co;
+  form-action 'none';
+  base-uri 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>連携の許可 - Workout tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./oauth-consent.css">
+</head>
+<body>
+<main class="oc-wrap">
+  <div class="oc-logo">Workout <span>tracker</span></div>
+
+  <!-- 読み込み中 -->
+  <section id="oc-loading" class="oc-card">
+    <div class="oc-spinner" aria-hidden="true"></div>
+    <p class="oc-muted">確認しています...</p>
+  </section>
+
+  <!-- 未ログイン: その場でログイン -->
+  <section id="oc-login" class="oc-card" hidden>
+    <h1 class="oc-title">ログイン</h1>
+    <p class="oc-muted">連携を許可するために、Workout tracker にログインしてください。</p>
+    <form id="oc-login-form" novalidate>
+      <label class="oc-label" for="oc-email">メールアドレス</label>
+      <input class="oc-input" id="oc-email" type="email" autocomplete="username" required>
+      <label class="oc-label" for="oc-password">パスワード</label>
+      <input class="oc-input" id="oc-password" type="password" autocomplete="current-password" required>
+      <p id="oc-login-error" class="oc-error" role="alert" hidden></p>
+      <button class="oc-btn oc-btn-primary" id="oc-login-btn" type="submit">ログイン</button>
+    </form>
+  </section>
+
+  <!-- 同意 -->
+  <section id="oc-consent" class="oc-card" hidden>
+    <h1 class="oc-title">連携を許可しますか？</h1>
+    <p class="oc-lead"><strong id="oc-client-name"></strong> が、あなたの Workout tracker のデータにアクセスしようとしています。</p>
+    <dl class="oc-details">
+      <dt>アプリ</dt><dd id="oc-client-detail"></dd>
+      <dt>戻り先</dt><dd id="oc-redirect"></dd>
+      <dt>アカウント</dt><dd id="oc-user"></dd>
+      <dt>要求された権限</dt><dd id="oc-scopes"></dd>
+    </dl>
+    <p class="oc-warn">許可すると、このアプリはあなたの食事・体重・トレーニング記録を<strong>読み取り・追加・変更・削除</strong>できます。心当たりのない場合は「拒否」を選んでください。</p>
+    <p id="oc-consent-error" class="oc-error" role="alert" hidden></p>
+    <div class="oc-actions">
+      <button class="oc-btn oc-btn-secondary" id="oc-deny" type="button">拒否</button>
+      <button class="oc-btn oc-btn-primary" id="oc-approve" type="button">許可する</button>
+    </div>
+    <p class="oc-muted oc-small">アカウントを切り替える場合は<button class="oc-link" id="oc-signout" type="button">ログアウト</button>してください（アプリ本体からもログアウトされます）。</p>
+  </section>
+
+  <!-- エラー -->
+  <section id="oc-error" class="oc-card" hidden>
+    <h1 class="oc-title">連携を続けられません</h1>
+    <p id="oc-error-msg" class="oc-error"></p>
+    <p class="oc-muted">もう一度、連携元のアプリ（Claude など）から接続をやり直してください。</p>
+  </section>
+</main>
+
+<!-- supabase-js（UMD, SRI付き。バージョンを上げる際はintegrityも更新すること。index.htmlと同じ版） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"
+  integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
+  crossorigin="anonymous"></script>
+<script src="./oauth-consent.js"></script>
+</body>
+</html>

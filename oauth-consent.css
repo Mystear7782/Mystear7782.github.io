@@ -1,0 +1,54 @@
+/* OAuth同意画面のスタイル。既存アプリ(style.css)と同じ配色・フォント・ダークテーマ。
+   style.css には依存させない（アプリ側の変更で同意画面が壊れないように、必要な変数だけ複製）。 */
+:root{
+  --font:'Noto Sans JP',sans-serif;
+  --bg:#f5f6f7;--bg3:#f1f2f4;--surface:#ffffff;
+  --border:#e0e3e8;--border2:#c8cdd6;
+  --text:#111827;--text2:#374151;--text3:#6b7280;
+  --accent:#0ea5e9;--accent-t:#0369a1;
+  --red:#dc2626;--red-bg:#fee2e2;--red-t:#991b1b;
+  --amber-bg:#fef3c7;--amber-t:#92400e;
+  --shadow:0 4px 14px rgba(17,24,39,.09),0 2px 4px rgba(17,24,39,.05);
+  --r:14px;--r-sm:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1117;--bg3:#1f2229;--surface:#1a1d23;
+    --border:#252930;--border2:#333840;
+    --text:#f9fafb;--text2:#9ca3af;--text3:#6b7280;
+    --accent:#38bdf8;--accent-t:#7dd3fc;
+    --red:#f87171;--red-bg:#450a0a;--red-t:#fca5a5;
+    --amber-bg:#1c1001;--amber-t:#fde68a;
+    --shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+.oc-wrap{max-width:420px;margin:0 auto}
+.oc-logo{font-size:20px;font-weight:700;text-align:center;margin-bottom:16px}
+.oc-logo span{opacity:.65;font-weight:400}
+.oc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:20px}
+.oc-title{font-size:18px;font-weight:700;margin-bottom:10px}
+.oc-lead{font-size:14px;line-height:1.7;color:var(--text2);margin-bottom:14px;word-break:break-word}
+.oc-lead strong{color:var(--text)}
+.oc-muted{font-size:13px;color:var(--text3);line-height:1.6}
+.oc-small{margin-top:14px;font-size:12px}
+.oc-details{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:13px;background:var(--bg3);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px}
+.oc-details dt{color:var(--text3);white-space:nowrap}
+.oc-details dd{color:var(--text);word-break:break-all}
+.oc-warn{font-size:13px;line-height:1.7;background:var(--amber-bg);color:var(--amber-t);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px}
+.oc-error{font-size:13px;line-height:1.6;background:var(--red-bg);color:var(--red-t);border-radius:var(--r-sm);padding:10px 12px;margin:12px 0}
+.oc-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin:14px 0 6px}
+.oc-input{width:100%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);font-family:var(--font);font-size:16px;padding:11px 14px;border-radius:var(--r-sm);outline:none}
+.oc-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+.oc-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.oc-btn{width:100%;padding:13px;border-radius:var(--r-sm);font-family:var(--font);font-size:15px;font-weight:700;border:1.5px solid transparent;cursor:pointer;margin-top:6px}
+.oc-btn:disabled{opacity:.55;cursor:default}
+.oc-btn-primary{background:var(--accent);color:#fff}
+.oc-btn-secondary{background:transparent;color:var(--text2);border-color:var(--border2)}
+.oc-link{background:none;border:0;color:var(--accent-t);font:inherit;text-decoration:underline;cursor:pointer;padding:0 2px}
+.oc-spinner{width:28px;height:28px;margin:8px auto 12px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--accent);animation:oc-spin .8s linear infinite}
+.oc-card #oc-loading,#oc-loading{text-align:center}
+@keyframes oc-spin{to{transform:rotate(360deg)}}
