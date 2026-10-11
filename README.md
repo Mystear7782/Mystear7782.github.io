@@ -27,23 +27,24 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<npx supabase status -o env の ANON_KEY>
 
 ## よく使うコマンド
 
-| コマンド | 内容 |
-|---|---|
-| `npm run dev` | 開発サーバー（http://localhost:5173） |
-| `npm run build` | 型チェック + 本番ビルド（`dist/`。CSP・`sw.js` を含む） |
-| `npm run preview` | ビルド結果の確認 |
-| `npm run typecheck` / `lint` / `format:check` | 型チェック / ESLint / Prettier |
-| `npm test` | ユニット・コンポーネントテスト（Vitest） |
-| `npm run test:e2e` | E2E（Playwright。ローカルSupabaseが必要） |
-| `npm run gen:types` | ローカルDBからDB型を生成（`src/types/database.ts` と MCP側） |
-| `npx supabase test db` | DBテスト（pgTAP） |
+| コマンド                                      | 内容                                                         |
+| --------------------------------------------- | ------------------------------------------------------------ |
+| `npm run dev`                                 | 開発サーバー（http://localhost:5173）                        |
+| `npm run build`                               | 型チェック + 本番ビルド（`dist/`。CSP・`sw.js` を含む）      |
+| `npm run preview`                             | ビルド結果の確認                                             |
+| `npm run typecheck` / `lint` / `format:check` | 型チェック / ESLint / Prettier                               |
+| `npm test`                                    | ユニット・コンポーネントテスト（Vitest）                     |
+| `npm run test:e2e`                            | E2E（Playwright。ローカルSupabaseが必要）                    |
+| `npm run gen:types`                           | ローカルDBからDB型を生成（`src/types/database.ts` と MCP側） |
+| `npx supabase test db`                        | DBテスト（pgTAP）                                            |
 
 ## ローカルのSupabase
 
 ```bash
 # 初回のみ: ローカル用のJWT署名鍵を作る（config.toml が参照。リポジトリには入れない）
-npx supabase gen signing-key --algorithm ES256
-#   出力を [ ... ] で囲んだJSON配列として supabase/signing_keys.json に保存する
+echo '[]' > supabase/signing_keys.json
+npx supabase gen signing-key --algorithm ES256 --append
+#   supabase/signing_keys.json に鍵が追記される（ファイルが無いと失敗するので、先に空の配列を作る）
 
 npx supabase start        # マイグレーションが適用された状態で起動
 npx supabase db reset     # ローカルDBを作り直す

@@ -41,8 +41,8 @@ jobs:
       # config.toml が参照するローカル用のJWT署名鍵（秘密鍵のためリポジトリには入れていない）をCI上で生成する
       - name: ローカル用JWT署名鍵を生成
         run: |
-          supabase gen signing-key --algorithm ES256 > /tmp/signing-key.json 2>/dev/null
-          echo "[$(cat /tmp/signing-key.json)]" > supabase/signing_keys.json
+          echo '[]' > supabase/signing_keys.json
+          supabase gen signing-key --algorithm ES256 --append
       # マイグレーションを適用したローカルDBで、pgTAP(supabase/tests/database)を実行する
       - run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,realtime,storage-api,postgres-meta,mailpit
       - run: supabase test db
@@ -64,8 +64,8 @@ jobs:
       # config.toml が参照するローカル用のJWT署名鍵（秘密鍵のためリポジトリには入れていない）をCI上で生成する
       - name: ローカル用JWT署名鍵を生成
         run: |
-          supabase gen signing-key --algorithm ES256 > /tmp/signing-key.json 2>/dev/null
-          echo "[$(cat /tmp/signing-key.json)]" > supabase/signing_keys.json
+          echo '[]' > supabase/signing_keys.json
+          supabase gen signing-key --algorithm ES256 --append
       # ローカルのSupabase（本番には接続しない）。E2Eはテストごとに新しいユーザーを作る
       - run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,postgres-meta,mailpit
       - run: npm run test:e2e
