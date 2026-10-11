@@ -1,0 +1,81 @@
+# CI: push / プルリクエストのたびに、型チェック・lint・フォーマット・ユニットテスト・ビルド・
+# DBテスト・E2Eテストを実行する。デプロイはしない（デプロイは deploy.yml）。
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: 型チェック・lint・ユニットテスト・ビルド
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  database:
+    name: DBテスト（pgTAP・ローカルSupabase）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
+      # config.toml が参照するローカル用のJWT署名鍵（秘密鍵のためリポジトリには入れていない）をCI上で生成する
+      - name: ローカル用JWT署名鍵を生成
+        run: |
+          supabase gen signing-key --algorithm ES256 > /tmp/signing-key.json 2>/dev/null
+          echo "[$(cat /tmp/signing-key.json)]" > supabase/signing_keys.json
+      # マイグレーションを適用したローカルDBで、pgTAP(supabase/tests/database)を実行する
+      - run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,realtime,storage-api,postgres-meta,mailpit
+      - run: supabase test db
+
+  e2e:
+    name: E2Eテスト（Playwright・ローカルSupabase）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # config.toml が参照するローカル用のJWT署名鍵（秘密鍵のためリポジトリには入れていない）をCI上で生成する
+      - name: ローカル用JWT署名鍵を生成
+        run: |
+          supabase gen signing-key --algorithm ES256 > /tmp/signing-key.json 2>/dev/null
+          echo "[$(cat /tmp/signing-key.json)]" > supabase/signing_keys.json
+      # ローカルのSupabase（本番には接続しない）。E2Eはテストごとに新しいユーザーを作る
+      - run: supabase start -x studio,imgproxy,vector,logflare,edge-runtime,postgres-meta,mailpit
+      - run: npm run test:e2e
+        env:
+          CI: 'true'
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

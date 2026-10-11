@@ -210,6 +210,9 @@ isOneToOne: false
 { Args: { "p_date": string,"p_exercise_id": string,"p_new_session"?: boolean,"p_reps": number,"p_session_id"?: string,"p_time": string,"p_weight_kg": number }; Returns: {
               "id": string,"reps": number,"session_created": boolean,"session_id": string,"set_no": number,"weight_kg": number
             }[]
+                           },
+"save_menu_set":
+{ Args: { "p_exercise_ids": (string)[],"p_id": string,"p_name": string }; Returns: string
                            }
           }
           Enums: {

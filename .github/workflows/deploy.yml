@@ -1,0 +1,51 @@
+# GitHub Pages へのデプロイ: main に push されたら、ビルドして公開する。
+# 前提: リポジトリの Settings > Pages > Build and deployment > Source を「GitHub Actions」にしておくこと。
+# （切り替えの手順は docs/basic-design.md の「デプロイ」を参照。Sourceが「Deploy from a branch」のままだと
+#  このワークフローのデプロイは失敗し、公開されるのはリポジトリ直下のファイルのままになる）
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時に複数のデプロイが走らないようにする（進行中のデプロイは中断しない）
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ビルド
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # デプロイ前の最終確認（型チェック・ユニットテスト）。E2Eは ci.yml で実行済み
+      - run: npm run typecheck
+      - run: npm test
+      # 本番のSupabaseに接続するビルド（VITE_SUPABASE_URL を指定しない＝既定で本番。vite.config.ts / src/lib/supabase.ts）
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: 公開
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

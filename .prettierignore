@@ -1,0 +1,15 @@
+dist
+node_modules
+legacy
+supabase
+docs
+tests
+public
+package-lock.json
+coverage
+playwright-report
+test-results
+e2e/.auth
+src/types/database.ts
+src/styles/global.css
+dist-e2e
