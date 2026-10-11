@@ -3,6 +3,7 @@
 | バージョン | 日付 | 内容 |
 |---|---|---|
 | 1.0 | 2026-10-11 | 新規作成（フェーズ2: MCPサーバー構築） |
+| 1.1 | 2026-10-11 | フェーズ3: PWAのReact移行に伴う注記を追記（§7）。MCPのコード・ツールは変更なし |
 
 Claude（スマホ/Web/Claude Code）から、Supabase上の記録（食事・体重・ワークアウト）を直接読み書きするためのMCPサーバー。
 中心のユースケースは「食事内容をチャットで伝える → ClaudeがPFCを推定 → `log_meal` で meal_logs へ記録」。
@@ -118,3 +119,10 @@ supabase/functions/mcp/
 5. Claude の コネクタ に `https://swncmbsamxoyjeojwbyc.supabase.co/functions/v1/mcp` を登録
 
 > `supabase config push` は使わない。リポジトリの `config.toml` はローカル開発用の既定値を含むため、本番のAuth設定を意図せず上書きしてしまう。本番のAuth設定はダッシュボードで管理する。
+
+## 7. フェーズ3（React移行）との関係
+
+- MCPサーバーのコード・ツールはフェーズ3で変更していない。`database.types.ts` は `npm run gen:types` でPWA側（`src/types/database.ts`）と同時に生成する。
+- フェーズ3で `menu_sets` / `menu_set_items` がDB管理になったが、MCPのツールの対象には含めていない（`list_records` 等の汎用ツールの対象テーブルにも入っていない）。Claudeからメニューセットを扱いたい場合は、本番DBのマイグレーション適用後に追加を検討する（バックログ B-16）。
+- 新しい一意インデックス（有効な種目名は部位内で一意）により、`insert_record` で同じ部位に同名の有効な種目を作るとエラー（23505）になる。他の経路（PWA）と同じ挙動。
+- MCPで書いた記録は、PWAを開き直す/画面に戻ったときに表示される（TanStack Queryの再取得。基本設計書 5.4）。

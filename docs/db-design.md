@@ -4,6 +4,7 @@
 |---|---|---|
 | 1.0 | 2026-10-11 | 新規作成。フェーズ0（本番スキーマのマイグレーション化）とフェーズ1（制約・RPC・権限・menu_set_items.position）を反映 |
 | 1.1 | 2026-10-11 | フェーズ2: `sets.created_at` を追加（MCPの二重登録防止用）。MCPサーバーの設計は `mcp-design.md` を参照 |
+| 1.2 | 2026-10-11 | フェーズ3: `save_menu_set` RPC、有効なメニュー名の部分一意インデックス、RLSの `(select auth.uid())` 化。メニューセットをDBで管理 |
 
 スキーマの正は `supabase/migrations/` のSQL。本書はその要約であり、食い違う場合はSQLが優先。
 
@@ -29,7 +30,8 @@
 
 - `user_id`（`exercises` / `body_weight_logs` / `meal_logs` / `menu_sets`）は `NOT NULL default auth.uid()`。クライアントは送らない。
 - `workout_sessions` / `sets` / `cardio_logs` / `menu_set_items` は `user_id` を持たず、RLSが親（`exercises` / `menu_sets`）の `user_id` を辿って判定する。
-- メニューセットはPWA上は現状 localStorage（`gl_menusets`）。DBへの移行はフェーズ3。
+- `exercises` には `(user_id, category, name)` の部分一意インデックス `exercises_user_category_name_active_key`（`WHERE NOT archived`）がある。同じ部位に同名の「有効な」メニューは作れない（アーカイブ済みは重複可）。違反は SQLSTATE 23505 で、PWAは「同じ部位に同名のメニューがあります」と表示する。
+- メニューセットはDB管理（フェーズ3で localStorage の `gl_menusets` から移行。PWAが初回起動時に自動移行し、移行後のキーは `gl_menusets_migrated` に改名する）。
 
 ## 3. アクセス制御
 
@@ -46,6 +48,7 @@
 |---|---|
 | `get_my_exercises()` / `get_my_body_weight_logs()` / `get_my_meal_logs()` / `get_my_sessions_full()` | PWAの読み取り（既存）。`get_my_sessions_full` は1セッション1行（PostgREST Max rows=1000に注意） |
 | `record_set(p_exercise_id, p_date, p_time, p_weight_kg, p_reps, p_new_session default false, p_session_id default null)` | セット追加。set_no採番(max+1)とinsertを1トランザクションで行う。下記参照 |
+| `save_menu_set(p_id uuid, p_name text, p_exercise_ids text[])` → uuid | メニューセットの作成/更新。`p_id` が null なら新規。重複するidは除去して配列の順に `position` を採番し、`menu_set_items` を入れ替える。有効なメニューが1つも無ければ例外。1トランザクションで完結（PWAのセット保存はこれ1本） |
 | `get_meal_daily_totals(p_from, p_to)` | 日別のP/F/C/カロリー合計と件数。期間必須・730日まで |
 | `get_body_weight_range(p_from, p_to)` | 期間内の体重ログ。期間必須・730日まで |
 | `get_exercise_history(p_exercise_id, p_from default null, p_limit default 20)` | 種目の履歴。新しいセッションから `p_limit` 件（1〜100に丸める）。筋トレはセットごと、有酸素はセッションごとに1行 |
@@ -69,3 +72,18 @@
 | `20261010153632_tighten_privileges` | テーブル/RPC権限の最小化、ポリシーを `TO authenticated` に限定 |
 | `20261010153636_add_menu_set_items_position` | `menu_set_items.position` の追加 |
 | `20261010155612_add_sets_created_at` | `sets.created_at`（既存行はセッションの作成時刻で補完）とそのインデックス（フェーズ2） |
+| `20261011035425_add_save_menu_set` | `save_menu_set` RPC（フェーズ3） |
+| `20261011042918_add_exercises_unique_active_name` | 有効なメニュー名の部分一意インデックス（フェーズ3）。**本番適用前に重複が無いことを確認する**（下記） |
+| `20261011042922_optimize_rls_auth_uid` | 各ポリシーの `auth.uid()` を `(select auth.uid())` に変更（行ごとの再評価を避ける。意味は変わらない） |
+
+### 本番適用前の確認（一意インデックス）
+
+重複があるとインデックスの作成が失敗するため、`supabase db query --linked` で次を実行して0行であることを確認する。
+
+```sql
+select user_id, category, name, count(*)
+from public.exercises
+where not archived
+group by user_id, category, name
+having count(*) > 1;
+```

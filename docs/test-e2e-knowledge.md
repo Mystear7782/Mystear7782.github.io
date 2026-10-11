@@ -1,237 +1,113 @@
-# GymLog E2Eテスト環境構築ナレッジ
+# Workout tracker テスト環境ナレッジ
 
 ## 改訂履歴
 
 | バージョン | 日付 | 内容 |
 |---|---|---|
-| 1.0 | 2026-03-22 | 初版作成 |
+| 1.0〜1.x | 2026-03〜08 | 旧版（Python + pytest + Playwright、localStorage前提）のE2E環境構築手順 |
+| 2.0 | 2026-10-11 | **全面改訂**。TypeScript + Playwright（ローカルSupabase）、Vitest、pgTAP、CI。旧Python手順は廃止 |
 
 ---
 
-## 1. 概要
+## 1. テストの種類と実行方法
 
-| 項目 | 内容 |
-|---|---|
-| テストフレームワーク | Playwright（Python） |
-| テストランナー | pytest |
-| 対象ブラウザ | Chromium |
-| 対象URL | `https://mystear7782.github.io/` |
-| IDE | Visual Studio Code |
+| 種類 | コマンド | 前提 | 対象 |
+|---|---|---|---|
+| 型チェック | `npm run typecheck` | — | `tsc -b` |
+| lint / フォーマット | `npm run lint` / `npm run format:check` | — | ESLint / Prettier |
+| ユニット・コンポーネント | `npm test`（監視は `npm run test:watch`） | — | Vitest + Testing Library（jsdom）。`src/**/*.test.{ts,tsx}` |
+| DB | `npx supabase test db` | ローカルSupabase起動 | pgTAP（`supabase/tests/database/*.sql`） |
+| E2E | `npm run test:e2e` | ローカルSupabase起動 | Playwright（`e2e/*.spec.ts`） |
+| MCP | `supabase/functions/mcp/` 内で `deno task test` | Deno + ローカルSupabase | `docs/mcp-acceptance.md` |
 
----
+CI（`.github/workflows/ci.yml`）は、push / プルリクエストのたびに check（型・lint・フォーマット・ユニット・ビルド）、database（pgTAP）、e2e（Playwright）の3ジョブを実行する。デプロイは `deploy.yml`（main への push）。
 
 ## 2. 前提条件
 
-以下がインストール済みであること。
-
-| ツール | バージョン確認コマンド |
-|---|---|
-| Python 3.10以上 | `python --version` |
-| pip | `pip --version` |
-| Node.js（任意） | `node --version` |
-
----
-
-## 3. インストール手順
-
-### 3.1 Playwrightのインストール
+- Node.js 22.12 以上、`npm ci` 済み
+- Docker Desktop が起動していること
+- Supabase CLI（`npx supabase`）
+- ローカル用JWT署名鍵 `supabase/signing_keys.json`（`config.toml` が参照。秘密鍵のためコミットしない。README参照）
 
 ```bash
-# Playwright本体とpytestプラグインをインストール
-pip install playwright pytest-playwright
-
-# テスト用ブラウザ（Chromium）をインストール
-playwright install chromium
+npx supabase start               # 初回は数分。マイグレーション適用済みで起動
+npx playwright install chromium  # 初回のみ
+npm run test:e2e
 ```
 
-### 3.2 VSCode拡張機能のインストール
+E2Eは **ローカルのSupabaseにだけ接続する**。接続情報は環境変数 `E2E_SUPABASE_URL` / `E2E_SUPABASE_PUBLISHABLE_KEY` / `E2E_SUPABASE_SECRET_KEY` があればそれを、無ければ `npx supabase status -o env` から読む（キーをファイルに書かない）。本番のURLやキーを渡さないこと。
 
-VSCodeの拡張機能タブ（`Ctrl+Shift+X`）で以下を検索してインストールする。
+## 3. Playwrightの構成（`playwright.config.ts`）
 
-```
-Playwright Test for VSCode
-公開者: Microsoft
-```
-
----
+| 項目 | 内容 |
+|---|---|
+| プロジェクト `app` | 開発サーバー（`http://127.0.0.1:5173`）。`pwa.spec.ts` 以外 |
+| プロジェクト `pwa` | 本番ビルドを `dist-e2e/` に出力し `vite preview`（`http://127.0.0.1:4173`）で配信。`pwa.spec.ts` のみ（Service Worker・CSPは本番ビルドでしか検証できない） |
+| 並列 | `fullyParallel`。ローカル4 / CI 2 ワーカー |
+| リトライ | CIのみ1回 |
+| 失敗時の成果物 | トレース（`retain-on-failure`）、スクリーンショット。CIでは `playwright-report/` と `test-results/` をアーティファクトに保存 |
+| アプリの接続先 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` をローカルに向けて起動 |
 
 ## 4. ディレクトリ構成
 
 ```
-gym-log/                              ← VSCodeで開くルートフォルダ
-│
-├── index.html                        ← アプリ本体
-├── manifest.json
-├── sw.js
-│
-├── pytest.ini                        ← pytest設定（テスト探索パスを指定）
-│
-├── docs/                             ← 設計ドキュメント
-│   ├── basic-design.md
-│   ├── detail-design.md
-│   ├── screen-transition.md
-│   ├── usecase.md
-│   └── test-cases-e2e.md
-│
-└── tests/
-    └── e2e/
-        ├── conftest.py               ← 共通フィクスチャ（全テストで自動読み込み）
-        ├── test_01_menu_add.py       ← TC-01系: メニュー追加・ナビゲーション
-        ├── test_02_03_menu_list_archive.py  ← TC-02〜03系: 一覧・アーカイブ・削除
-        ├── test_04_set_record.py     ← TC-04・06系: セット記録・メニュー詳細
-        ├── test_05_cardio_record.py  ← TC-05系: 有酸素運動記録
-        ├── test_07_analysis.py       ← TC-07系: メニュー分析
-        └── test_08_csv.py            ← TC-08系: CSV出力・入力
+e2e/
+├── fixtures.ts              test / expect の拡張（user, db, ログイン済みの page）と openApp / sidebarGo / footerGo / todayStr
+├── support/supabase.ts      createTestUser（管理APIでユーザー作成+サインイン）, Seeder（本人の権限でデータ投入）
+├── support/drag.ts          dragHandle（つまみのポインタ操作）
+└── *.spec.ts                機能別のテスト（docs/test-cases-e2e.md）
 ```
 
-### ファイルの役割
+### フィクスチャ
 
-| ファイル | 役割 |
+| 名前 | 内容 |
 |---|---|
-| `pytest.ini` | テスト探索パス・命名規則を定義。VSCode拡張がこのファイルを読んでテストを検出する |
-| `conftest.py` | ブラウザ起動・localStorage初期化・テストデータ投入などの共通フィクスチャ。pytestが自動で読み込む |
-| `test_*.py` | テストケースの実装ファイル。機能カテゴリごとに分割 |
+| `user` | テストごとに新しく作ったユーザー（メール・パスワード・ログイン済みセッション）。テスト同士のデータは分離される |
+| `db` | `Seeder`。ユーザー本人のアクセストークンで、画面を介さずメニュー・セッション・体重・食事を投入する |
+| `page` | `user` のセッションを `localStorage`（`sb-<ref>-auth-token`）に仕込んだページ。アプリより先に `addInitScript` で入れ、ログアウト後の再読み込みで復活しないよう一度だけ入れる |
 
----
+secret key はこのテストコード（ユーザー作成）でだけ使う。アプリ・リポジトリ・CIには入れない（CIではローカルSupabaseが払い出す一時のキー）。
 
-## 5. 設定ファイル
+## 5. テストの書き方・ルール
 
-### pytest.ini
+1. ファイルは機能別の `e2e/<機能>.spec.ts`。テスト名は `TC-<系統>-<連番>: 内容`（`docs/test-cases-e2e.md`）。
+2. 要素は、旧版から引き継いだID・クラス（`#page-*`, `.page.active`, `#toast`, `.show`）と、ロール/テキストで取得する。固定待ち（sleep）は使わず、ロケーターの自動待機と `expect` を使う。
+3. `page` の `class` は完全一致で比較しない（`toHaveClass(/active/)` など）。
+4. データは `db`（Seeder）で投入する。**画面を開いた後にDBへ直接投入する場合は、再読み込みや画面復帰を挟む**。TanStack Queryのキャッシュが古いままで、投入したデータが画面に出ないため。可能なら画面を開く前に投入する。
+5. ドラッグ（並び替え）は `dragHandle` を使う。3行以上を動かすときは移動量を220px以上にする（短いと隣の行の途中で止まる）。
+6. 画面復帰の再取得は、`window` に `visibilitychange`（`document` ではなく `window`）を dispatch して起こす（TC-SYNC）。
+7. 書き込みの失敗を検証するときは、`page.route` で Supabase へのリクエストを失敗させる。
+8. 本番ビルドでしか検証できないこと（Service Worker・オフライン・CSP）は `pwa.spec.ts` に書く。
 
-```ini
-[pytest]
-testpaths = tests/e2e
-python_files = test_*.py
-python_classes = Test*
-python_functions = test_*
-```
+## 6. PWA（Service Worker）のテストの注意
 
-| 設定項目 | 説明 |
-|---|---|
-| `testpaths` | テストファイルを探索するディレクトリ |
-| `python_files` | テストファイルと認識するファイル名パターン |
-| `python_classes` | テストクラスと認識するクラス名パターン |
-| `python_functions` | テスト関数と認識する関数名パターン |
+- Service Worker は `dist-e2e` のビルドを配信するプロジェクト `pwa` でのみ有効。`app`（開発サーバー）では登録されない。
+- オフラインの再現は `context.setOffline(true)`。キャッシュ照合に `Vary: Origin` が影響する問題（`ignoreVary`）は、オフライン再読み込みのテスト（TC-PWA-04）で守られている。
+- ネットワーク遅延（3秒超）の再現は、`page.route` で応答を遅らせる（TC-PWA-08）。
+- Supabaseの応答が Service Worker のキャッシュに入っていないことは、Cache Storage の中身を検査して確認する（TC-PWA-03）。
 
----
+## 7. Vitest
 
-## 6. VSCodeでのテスト実行手順
+- 環境は jsdom、`globals: true`、セットアップは `src/test/setup.ts`。
+- 純粋関数（`lib/`）は単体テスト、画面部品は Testing Library（`LoginPage`, `RmPage`, `MenuFields`, `useSortable`）。
+- Service Worker は判定ロジック（`sw/routing.ts`）とキャッシュ削除（`legacyCaches.ts`）をテストする。`sw.ts` 自体の動きは E2E（`pwa.spec.ts`）で確認する。
 
-### 6.1 初回セットアップ
+## 8. pgTAP
 
-1. VSCodeで `gym-log` フォルダをルートとして開く
-   ```
-   ファイル → フォルダを開く → gym-log を選択
-   ```
+- 配置: `supabase/tests/database/*.sql`（`phase1_db`、`phase3_menu_sets`、`phase3_constraints_rls`）。
+- 内容: RLS（他人の行が見えない/書けない）、権限（`anon` が何もできない）、制約、RPC（`record_set` の採番・並行性、`save_menu_set`）、一意インデックス、生成列。
+- `plan(N)` の件数が合わないと失敗する。ケースを足したら `plan` を更新する。
+- 同一トランザクション内では `now()` が同じなので、`created_at` の順序に依存するテストは値を明示的にずらす。
 
-2. フラスコアイコンが左サイドバーに表示されない場合は、コマンドパレットから設定する
-   ```
-   Ctrl+Shift+P → "Python: Configure Tests" → pytest を選択 → tests/e2e を指定
-   ```
+## 9. よくあるエラーと対処
 
-### 6.2 テストの実行方法
-
-| 方法 | 操作 |
-|---|---|
-| 全テスト実行 | 左サイドバーのフラスコアイコン → 「すべてのテストを実行」 |
-| ファイル単位で実行 | テストファイル上部の ▶ ボタン |
-| 関数単位で実行 | テスト関数左の ▶ ボタン |
-| ターミナルから全実行 | `python -m pytest tests/e2e -v` |
-| 特定ファイルのみ | `python -m pytest tests/e2e/test_01_menu_add.py -v` |
-| 特定テストのみ | `python -m pytest tests/e2e/test_01_menu_add.py::TestMenuAdd::test_01_01_add_strength_menu -v` |
-
-### 6.3 ヘッドレス / 有頭モードの切替
-
-```bash
-# デフォルト（ヘッドレス: ブラウザ画面非表示）
-python -m pytest tests/e2e -v
-
-# 有頭モード（ブラウザ画面を表示して確認したい場合）
-python -m pytest tests/e2e -v --headed
-
-# スローモード（動作を遅くして目視確認しやすくする）
-python -m pytest tests/e2e -v --headed --slowmo=500
-```
-
----
-
-## 7. conftest.py の主要フィクスチャ
-
-### フィクスチャ一覧
-
-| フィクスチャ名 | 内容 | 主な用途 |
+| 症状 | 原因 | 対処 |
 |---|---|---|
-| `page` | localStorageクリア済みの新規ページ | 全テストの基本 |
-| `page_with_menu` | 「胸/フリーウェイト/ベンチプレス」登録済み | セット記録・詳細テスト |
-| `page_with_cardio` | 「有酸素運動/ランニング」登録済み | 有酸素記録テスト |
-| `page_with_sets` | ベンチプレスに2セット記録済み | 統計・分析テスト |
-
-### 主要ヘルパー関数
-
-| 関数名 | 説明 |
-|---|---|
-| `clear_storage(page)` | localStorageをクリアしてリロード |
-| `seed_menu(page, category, type, name)` | テスト用メニューを1件登録 |
-| `open_sidebar(page)` | ハンバーガーをクリックしてサイドバーを開く |
-| `close_sidebar_if_open(page)` | サイドバーが開いていれば閉じる |
-
----
-
-## 8. テストケースとファイルの対応
-
-| ファイル | TC-ID | テスト数 |
-|---|---|---|
-| `test_01_menu_add.py` | TC-NAV-01〜04, TC-01-01〜12 | 16 |
-| `test_02_03_menu_list_archive.py` | TC-02-01〜02, TC-03-01〜05 | 7 |
-| `test_04_set_record.py` | TC-04-01〜14, TC-06-01〜04 | 14 |
-| `test_05_cardio_record.py` | TC-05-01〜09 | 9 |
-| `test_07_analysis.py` | TC-07-01〜10 | 10 |
-| `test_08_csv.py` | TC-08-01〜08 | 8 |
-| **合計** | | **64** |
-
----
-
-## 9. 新規テストを追加する際のルール
-
-### ファイル命名規則
-
-```
-test_{連番}_{機能名}.py
-例: test_09_menu_edit.py
-```
-
-### テストクラス・関数の命名規則
-
-```python
-class Test{機能名}:
-    def test_{TC-ID}_{内容}(self, page):
-        """TC-XX-XX: テストケース名"""
-```
-
-### テストケースIDの採番
-
-| 桁 | 意味 | 例 |
-|---|---|---|
-| TC-XX | カテゴリ番号（ファイル番号と一致） | TC-09 |
-| TC-XX-YY | カテゴリ内の連番 | TC-09-01 |
-
-### フィクスチャ選択の基準
-
-```
-記録データが不要 → page
-メニューだけ必要 → page_with_menu / page_with_cardio
-セット記録まで必要 → page_with_sets
-それ以外 → conftest.py に新しいフィクスチャを追加
-```
-
----
-
-## 10. よくあるエラーと対処法
-
-| エラー | 原因 | 対処 |
-|---|---|---|
-| `playwright._impl._errors.TimeoutError` | 要素が見つからない・ページ遷移が遅い | `wait_for_timeout()` を増やす or `wait_for_selector()` で明示的に待つ |
-| `ModuleNotFoundError: conftest` | conftest.pyのimportパスが通っていない | `pytest.ini` の `testpaths` を確認する |
-| `AssertionError` on localStorage | ページリロード前にlocalStorageを読んでいる | `wait_for_timeout(500)` を操作後に追加する |
-| テストがVSCodeで表示されない | pytest.iniが正しい場所にない | `gym-log/` 直下に `pytest.ini` があるか確認 |
-| ブラウザが起動しない | Chromiumが未インストール | `playwright install chromium` を実行 |
+| `supabase start` が失敗する | Docker Desktop が起動していない | 起動を待つ。初回はイメージの取得に時間がかかる |
+| 認証関連で `supabase start` が失敗する | `supabase/signing_keys.json` が無い | README の手順で署名鍵を生成する |
+| E2Eが `E2E_SUPABASE_URL` を求める | ローカルSupabaseが起動していない | `npx supabase start` |
+| 画面に投入したはずのデータが出ない | 画面を開いた後にDBへ投入した（キャッシュが古い） | 投入を画面を開く前にするか、再読み込みを挟む |
+| ドラッグしても並びが変わらない | 移動量が不足 / ポインタ操作の順序 | `dragHandle` を使い、移動量を増やす |
+| 一意制約（`exercises_user_category_name_active_key`）で追加に失敗する | 同じ部位・同名の有効なメニューが既にある（並列テストで同じ名前を使った等） | テストごとに名前を変える（ユーザーが違えば衝突しない） |
+| `unique_violation` 等で `db reset` 後も落ちる | ローカルDBに古いテストデータが残っている | `npx supabase db reset` |
+| PWAテストでSWが見つからない | `dist-e2e` が古い / 開発サーバーで実行している | `pwa` プロジェクトで実行する（`npx playwright test --project=pwa`） |
