@@ -67,6 +67,5 @@ src/        アプリ本体（features/ 画面別、api/ データ層、lib/ 共
 public/     アイコン、OAuth同意画面（oauth-consent.html）
 e2e/        Playwright E2E
 supabase/   マイグレーション、pgTAP、MCPサーバー（functions/mcp）
-legacy/     旧アプリ（素のJS版）。参照用
 docs/       設計書
 ```

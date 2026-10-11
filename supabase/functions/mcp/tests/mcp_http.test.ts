@@ -60,18 +60,19 @@ Deno.test('AC-8: tools/list に全ツールがあり、注釈とtable enumが仕
   const tools: Record<string, any> = Object.fromEntries(r.json.result.tools.map((t: any) => [t.name, t]))
 
   assertEquals(Object.keys(tools).sort(), [
-    'delete_record', 'get_exercise_history', 'get_meal_summary', 'get_weight_trend', 'insert_record',
-    'list_exercises', 'list_records', 'log_body_weight', 'log_cardio', 'log_meal', 'log_workout_set', 'update_record',
+    'delete_menu_set', 'delete_record', 'get_exercise_history', 'get_meal_summary', 'get_weight_trend', 'insert_record',
+    'list_exercises', 'list_menu_sets', 'list_records', 'log_body_weight', 'log_cardio', 'log_meal', 'log_workout_set',
+    'save_menu_set', 'update_record',
   ])
 
-  for (const n of ['list_exercises', 'get_meal_summary', 'get_weight_trend', 'get_exercise_history', 'list_records']) {
+  for (const n of ['list_exercises', 'list_menu_sets', 'get_meal_summary', 'get_weight_trend', 'get_exercise_history', 'list_records']) {
     assertEquals(tools[n].annotations.readOnlyHint, true, `${n} は readOnlyHint`)
   }
-  for (const n of ['update_record', 'delete_record']) {
+  for (const n of ['update_record', 'delete_record', 'delete_menu_set']) {
     assertEquals(tools[n].annotations.destructiveHint, true, `${n} は destructiveHint`)
     assertStringIncludes(tools[n].description, '確認')
   }
-  for (const n of ['log_meal', 'log_body_weight', 'log_workout_set', 'log_cardio', 'insert_record']) {
+  for (const n of ['log_meal', 'log_body_weight', 'log_workout_set', 'log_cardio', 'insert_record', 'save_menu_set']) {
     assertEquals(tools[n].annotations.readOnlyHint, false)
     assertEquals(tools[n].annotations.destructiveHint, false)
   }

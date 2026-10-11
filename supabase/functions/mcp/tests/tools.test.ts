@@ -13,6 +13,7 @@ import {
   updateRecord,
 } from '../tools/crud.ts'
 import { getExerciseHistory, getMealSummary, getWeightTrend, listExercisesTool } from '../tools/read.ts'
+import { deleteMenuSet, listMenuSets, saveMenuSet, saveMenuSetSchema } from '../tools/menu-sets.ts'
 import { logBodyWeight, logCardio, logMeal, logMealSchema, logWorkoutSet } from '../tools/write.ts'
 import { D, errText, json, newUser } from './helpers.ts'
 
@@ -362,4 +363,82 @@ Deno.test('他のユーザーのデータは一覧にも更新にも出ない（
   assertEquals(json<{ rows: Row[] }>(await listRecords(b.sb, { table: 'body_weight_logs', limit: 10 })).rows.length, 0)
   assertStringIncludes(errText(await deleteRecord(b.sb, { table: 'body_weight_logs', id: row.id as string })), '見つかりません')
   assertEquals((await a.sb.from('body_weight_logs').select('id')).data!.length, 1)
+})
+
+// ===== メニューセット（フェーズ3で追加: list_menu_sets / save_menu_set / delete_menu_set） =====
+Deno.test('メニューセット: 作成 → 一覧（並び順つき）→ 更新（置き換え）→ 削除', async () => {
+  const { sb } = await newUser()
+  const bench = await addExercise(sb, 'ベンチプレス')
+  const fly = await addExercise(sb, 'ダンベルフライ')
+  const squat = await addExercise(sb, 'スクワット', '足')
+
+  // 名前（部分一致）とidの混在で指定でき、配列の順が並び順になる
+  const created = json<{ created: boolean; id: string; exercise_ids: string[] }>(
+    await saveMenuSet(sb, { name: 'プッシュデー', exercises: ['ダンベルフライ', bench.id] }),
+  )
+  assertEquals(created.created, true)
+  assertEquals(created.exercise_ids, [fly.id, bench.id])
+
+  const list = json<{ menu_sets: { id: string; name: string; exercises: { id: string; name: string }[] }[] }>(
+    await listMenuSets(sb),
+  )
+  assertEquals(list.menu_sets.length, 1)
+  assertEquals(list.menu_sets[0].name, 'プッシュデー')
+  assertEquals(list.menu_sets[0].exercises.map((e) => e.name), ['ダンベルフライ', 'ベンチプレス'])
+
+  // 更新は、指定した種目だけに置き換わる
+  const updated = json<{ created: boolean; id: string }>(
+    await saveMenuSet(sb, { menu_set_id: created.id, name: 'レッグデー', exercises: ['スクワット'] }),
+  )
+  assertEquals(updated.created, false)
+  assertEquals(updated.id, created.id)
+  const after = json<{ menu_sets: { name: string; exercises: { id: string }[] }[] }>(await listMenuSets(sb))
+  assertEquals(after.menu_sets.length, 1)
+  assertEquals(after.menu_sets[0].name, 'レッグデー')
+  assertEquals(after.menu_sets[0].exercises.map((e) => e.id), [squat.id])
+
+  // 削除: セットだけが消え、種目は残る
+  json(await deleteMenuSet(sb, { menu_set_id: created.id }))
+  assertEquals(json<{ menu_sets: unknown[] }>(await listMenuSets(sb)).menu_sets.length, 0)
+  assertEquals(json<{ rows: Row[] }>(await listRecords(sb, { table: 'exercises', limit: 10 })).rows.length, 3)
+})
+
+Deno.test('メニューセット: 重複する指定は1つにまとめる', async () => {
+  const { sb } = await newUser()
+  const bench = await addExercise(sb, 'ベンチプレス')
+  const r = json<{ exercise_ids: string[] }>(
+    await saveMenuSet(sb, { name: 'A', exercises: [bench.id, 'ベンチ', 'ベンチプレス'] }),
+  )
+  assertEquals(r.exercise_ids, [bench.id])
+})
+
+Deno.test('メニューセット: 見つからない種目・アーカイブ済みの種目は候補つきエラーで、セットは作られない', async () => {
+  const { sb } = await newUser()
+  const bench = await addExercise(sb, 'ベンチプレス')
+  const old = await addExercise(sb, '旧メニュー')
+  json(await updateRecord(sb, { table: 'exercises', id: old.id, patch: { archived: true } }))
+
+  assertStringIncludes(errText(await saveMenuSet(sb, { name: 'X', exercises: ['存在しない'] })), '見つかりません')
+  assertStringIncludes(errText(await saveMenuSet(sb, { name: 'X', exercises: [bench.id, '旧メニュー'] })), '旧メニュー')
+  assertEquals(json<{ menu_sets: unknown[] }>(await listMenuSets(sb)).menu_sets.length, 0)
+})
+
+Deno.test('メニューセット: 他のユーザーのセットは見えず、更新・削除もできない（RLS）', async () => {
+  const a = await newUser()
+  const b = await newUser()
+  const ex = await addExercise(a.sb, 'ベンチプレス')
+  const set = json<{ id: string }>(await saveMenuSet(a.sb, { name: 'A', exercises: [ex.id] }))
+
+  assertEquals(json<{ menu_sets: unknown[] }>(await listMenuSets(b.sb)).menu_sets.length, 0)
+  const bEx = await addExercise(b.sb, 'ベンチプレス')
+  assertStringIncludes(errText(await saveMenuSet(b.sb, { menu_set_id: set.id, name: 'B', exercises: [bEx.id] })), '見つかりません')
+  assertStringIncludes(errText(await deleteMenuSet(b.sb, { menu_set_id: set.id })), '見つかりません')
+  assertEquals(json<{ menu_sets: { name: string }[] }>(await listMenuSets(a.sb)).menu_sets[0].name, 'A')
+})
+
+Deno.test('メニューセット: 入力検証（空の名前・空の種目配列・長すぎる名前）', () => {
+  assert(!saveMenuSetSchema.safeParse({ name: '', exercises: ['a'] }).success)
+  assert(!saveMenuSetSchema.safeParse({ name: 'A', exercises: [] }).success)
+  assert(!saveMenuSetSchema.safeParse({ name: 'あ'.repeat(31), exercises: ['a'] }).success)
+  assert(saveMenuSetSchema.safeParse({ name: 'あ'.repeat(30), exercises: ['a'] }).success)
 })
