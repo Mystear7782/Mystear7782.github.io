@@ -13,6 +13,14 @@ import {
   updateRecordSchema,
 } from './crud.ts'
 import {
+  deleteMenuSet,
+  deleteMenuSetSchema,
+  listMenuSets,
+  listMenuSetsSchema,
+  saveMenuSet,
+  saveMenuSetSchema,
+} from './menu-sets.ts'
+import {
   getExerciseHistory,
   getExerciseHistorySchema,
   getMealSummary,
@@ -81,7 +89,24 @@ export function registerTools(server: McpServer, sb: Client): void {
     annotations: WRITE,
   }, (a) => logCardio(sb, a))
 
+  server.registerTool('save_menu_set', {
+    title: 'メニューセットを保存',
+    description:
+      'メニューセット（名前を付けた種目の組み合わせ）を作成または更新する。menu_set_id を省略すると新規作成、指定するとそのセットの名前と所属種目を置き換える' +
+      '（更新は既存の内容を書き換えるので、実行前にユーザーへ変更内容を確認すること）。' +
+      'exercises は種目名(部分一致可)またはidの配列で、配列の順がセット内の並び順になる。見つからない/複数該当のときは候補を含むエラーになる。',
+    inputSchema: saveMenuSetSchema,
+    annotations: WRITE,
+  }, (a) => saveMenuSet(sb, a))
+
   // ===== 読み取り・集計系 =====
+  server.registerTool('list_menu_sets', {
+    title: 'メニューセット一覧',
+    description: 'メニューセットの一覧を、含まれる種目（セット内の並び順）つきで返す。',
+    inputSchema: listMenuSetsSchema,
+    annotations: READ,
+  }, (a) => listMenuSets(sb, a))
+
   server.registerTool('list_exercises', {
     title: '種目一覧',
     description: '種目(メニュー)のマスタ一覧を返す。既定ではアーカイブ済みを含まない。',
@@ -110,6 +135,15 @@ export function registerTools(server: McpServer, sb: Client): void {
     inputSchema: getExerciseHistorySchema,
     annotations: READ,
   }, (a) => getExerciseHistory(sb, a))
+
+  server.registerTool('delete_menu_set', {
+    title: 'メニューセットを削除',
+    description:
+      'メニューセットを1件削除する。元に戻せない操作なので、実行前に必ずユーザーへ削除対象を確認すること。' +
+      'セットに含まれていた種目そのものと、その記録は削除されない。',
+    inputSchema: deleteMenuSetSchema,
+    annotations: DESTRUCTIVE,
+  }, (a) => deleteMenuSet(sb, a))
 
   // ===== 汎用CRUD =====
   server.registerTool('list_records', {

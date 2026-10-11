@@ -67,6 +67,17 @@
 
 MCPサーバーはフロントエンドの実装方式に依存しないので、React移行より先に行う。
 
+### 進捗(2026-10-11 時点)
+
+| フェーズ | 状態 | 備考 |
+| --- | --- | --- |
+| 0 | 完了 | 本番スキーマを `supabase/migrations/` に取り込み済み |
+| 1 | 完了 | 制約・RPC・権限を本番に適用済み。`docs/db-design.md` |
+| 2 | 完了 | MCPサーバー（OAuth）を本番にデプロイ済み。`docs/mcp-design.md`、`docs/mcp-acceptance.md` |
+| 3 | 完了 | React版を本番に公開済み（GitHub Actionsでデプロイ）。iPhoneでの切り替え後の確認も完了。旧アプリはGitタグ `legacy-vanilla-js` に残し、`legacy/` は削除。旧版との差分は `docs/migration-diff.md` |
+
+フェーズ3の後に追加した作業: メニューセット用のMCPツール3本（`list_menu_sets` / `save_menu_set` / `delete_menu_set`。本番で使うには `supabase functions deploy mcp` が必要）、旧Python E2E（`tests/e2e/`）の削除、バックログ（B-02a/06/14/15）の廃止。
+
 ## 5. フェーズ0: 準備
 
 1. Supabase CLI を導入する(Windows: `npm i -D supabase` で `npx supabase` を使う、または scoop を使う)。

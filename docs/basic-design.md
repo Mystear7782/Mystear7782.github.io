@@ -6,6 +6,7 @@
 |---|---|---|
 | 1.0〜1.6 | 2026-03-21〜08-15 | 素のJS版（localStorage保存）の設計。1.6はメニューセット詳細・長押し並び替え・部位「その他」まで |
 | 2.0 | 2026-10-11 | **React移行（フェーズ3）に合わせて全面改訂**。Vite + React + TypeScript、データはSupabase(PostgreSQL)、認証・ダッシュボード・体重・食事、メニューセットのDB化、ドラッグハンドル方式の並び替え、自作Service Worker、CSP強化、MCP連携を反映。旧版の記述（localStorage・CDN読み込み・`unsafe-inline`）は削除 |
+| 2.1 | 2026-10-11 | 旧アプリ(`legacy/`)をGitタグ `legacy-vanilla-js` に移して削除。MCPにメニューセットのツールを追加。バックログ（B-02a/06/14/15）を廃止 |
 
 旧版（素のJS版）の機能との差分は `docs/migration-diff.md` を参照。
 
@@ -86,7 +87,6 @@ training_recorder/
 ├── e2e/                        Playwright E2Eテスト
 ├── supabase/                   migrations/, tests/database/(pgTAP), functions/mcp/(MCPサーバー), config.toml
 ├── scripts/gen-types.mjs       DB型の生成
-├── legacy/                     旧アプリ（素のJS版）。参照用
 ├── docs/                       設計書
 └── .github/workflows/          ci.yml, deploy.yml
 ```
@@ -116,17 +116,17 @@ training_recorder/
 | CSV出力・入力 | 筋トレ/有酸素の出力（全体・個別）、取り込み（未登録メニューは自動登録、重複はスキップ） |
 | オフライン閲覧 | 保存済みキャッシュと自作Service Workerにより、通信が無くても過去の記録を閲覧できる |
 | アプリ更新通知 | 新しい版が見つかるとバナーを表示し、「更新」で切り替える |
-| MCP連携 | Claudeから食事・体重・セットなどを記録・集計（`docs/mcp-design.md`） |
+| MCP連携 | Claudeから食事・体重・セット・メニューセットなどを記録・集計（`docs/mcp-design.md`） |
 
 ### 3.2 バックログ
 
 | ID | 機能 | ステータス |
 |---|---|---|
-| B-02a | グラフ切替（折れ線→棒） | 保留 |
-| B-06 | メニュー一覧: 最終記録からの経過日数 | 未対応 |
-| B-14 | メニューセットからの一括記録（セット内メニューを連続して記録） | 未対応 |
-| B-15 | 取得上限への対応（期間指定・ページング取得のRPC化）。現状はページ分割で全件取得 | 検討 |
-| B-16 | MCPの対象テーブルへの `menu_sets` / `menu_set_items` の追加 | 要相談 |
+| B-02a | グラフ切替（折れ線→棒） | 廃止（2026-10-11） |
+| B-06 | メニュー一覧: 最終記録からの経過日数 | 廃止（2026-10-11） |
+| B-14 | メニューセットからの一括記録（セット内メニューを連続して記録） | 廃止（2026-10-11） |
+| B-15 | 取得上限への対応（期間指定・ページング取得のRPC化）。現状はページ分割で全件取得 | 廃止（2026-10-11）。ページ分割で全件取得する現状の方式を維持する |
+| B-16 | MCPへのメニューセット対応（専用ツール `list_menu_sets` / `save_menu_set` / `delete_menu_set`） | 実装済み（2026-10-11。本番へは `functions deploy mcp` が必要） |
 
 ---
 

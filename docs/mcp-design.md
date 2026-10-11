@@ -3,7 +3,8 @@
 | バージョン | 日付 | 内容 |
 |---|---|---|
 | 1.0 | 2026-10-11 | 新規作成（フェーズ2: MCPサーバー構築） |
-| 1.1 | 2026-10-11 | フェーズ3: PWAのReact移行に伴う注記を追記（§7）。MCPのコード・ツールは変更なし |
+| 1.1 | 2026-10-11 | フェーズ3: PWAのReact移行に伴う注記を追記（§7） |
+| 1.2 | 2026-10-11 | メニューセットのツール3本（`list_menu_sets` / `save_menu_set` / `delete_menu_set`）を追加。ツールは15本 |
 
 Claude（スマホ/Web/Claude Code）から、Supabase上の記録（食事・体重・ワークアウト）を直接読み書きするためのMCPサーバー。
 中心のユースケースは「食事内容をチャットで伝える → ClaudeがPFCを推定 → `log_meal` で meal_logs へ記録」。
@@ -31,6 +32,7 @@ supabase/functions/mcp/
 │   └─ dedupe.ts       二重登録防止の時間窓（2分）
 ├─ tools/
 │   ├─ write.ts        log_meal / log_body_weight / log_workout_set / log_cardio
+│   ├─ menu-sets.ts    list_menu_sets / save_menu_set / delete_menu_set
 │   ├─ read.ts         list_exercises / get_meal_summary / get_weight_trend / get_exercise_history
 │   ├─ crud.ts         list_records / insert_record / update_record / delete_record
 │   └─ register.ts     名前・説明・注釈を付けてMCPサーバーへ登録
@@ -60,7 +62,7 @@ supabase/functions/mcp/
 - CSP: inline script なし（`script-src 'self' https://cdn.jsdelivr.net`）。
 - `sw.js` はこのページ（html/js/css）を**キャッシュせず素通し**にしている。プリキャッシュ対象にも入れていない。
 
-## 4. ツール一覧（12本）
+## 4. ツール一覧（15本）
 
 ### 書き込み系
 
@@ -79,6 +81,16 @@ supabase/functions/mcp/
 | `get_meal_summary` | `get_meal_daily_totals` RPC（日別合計。期間必須・730日まで） |
 | `get_weight_trend` | `get_body_weight_range` RPC（期間必須・730日まで） |
 | `get_exercise_history` | `get_exercise_history` RPC（新しいセッションから最大100件。アーカイブ済みの種目も指定可） |
+
+### メニューセット
+
+メニューセット（名前を付けた種目の組み合わせ。`menu_sets` / `menu_set_items`）は、所属の並び順を安全に扱うため、汎用CRUDではなく専用のツールで扱う。
+
+| ツール | 入力 | 動作 |
+|---|---|---|
+| `list_menu_sets` | なし | セットの一覧を、含まれる種目（セット内の並び順）つきで返す |
+| `save_menu_set` | `menu_set_id?`, `name`(30文字まで), `exercises`(名前/idの配列、1〜50件) | `save_menu_set` RPC で作成（`menu_set_id` 省略）または更新（名前と所属を置き換え）。種目は名前の解決規則（§5）で特定し、アーカイブ済みは指定不可。配列の順が並び順 |
+| `delete_menu_set` | `menu_set_id` | 1件削除（所属はCASCADE。種目と記録は残る）。`destructiveHint: true`、実行前にユーザーへ確認する |
 
 ### 汎用CRUD
 
@@ -122,7 +134,7 @@ supabase/functions/mcp/
 
 ## 7. フェーズ3（React移行）との関係
 
-- MCPサーバーのコード・ツールはフェーズ3で変更していない。`database.types.ts` は `npm run gen:types` でPWA側（`src/types/database.ts`）と同時に生成する。
-- フェーズ3で `menu_sets` / `menu_set_items` がDB管理になったが、MCPのツールの対象には含めていない（`list_records` 等の汎用ツールの対象テーブルにも入っていない）。Claudeからメニューセットを扱いたい場合は、本番DBのマイグレーション適用後に追加を検討する（バックログ B-16）。
+- `database.types.ts` は `npm run gen:types` でPWA側（`src/types/database.ts`）と同時に生成する。
+- フェーズ3で `menu_sets` / `menu_set_items` がDB管理になったため、専用のツール3本を追加した（§4）。汎用ツール（`list_records` 等）の対象テーブル（6つ）には含めない。本番DBには `save_menu_set` RPC を適用済み。ツールを使うには `supabase functions deploy mcp` が必要（ユーザーが実行）。
 - 新しい一意インデックス（有効な種目名は部位内で一意）により、`insert_record` で同じ部位に同名の有効な種目を作るとエラー（23505）になる。他の経路（PWA）と同じ挙動。
 - MCPで書いた記録は、PWAを開き直す/画面に戻ったときに表示される（TanStack Queryの再取得。基本設計書 5.4）。

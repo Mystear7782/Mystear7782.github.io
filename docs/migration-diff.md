@@ -1,6 +1,6 @@
 # 旧アプリ（素のJS版）→ React版 機能差分
 
-フェーズ3（React移行）の機能の差分一覧。旧版 = `legacy/`（素のJS + Supabase）。
+フェーズ3（React移行）の機能の差分一覧。旧版 = 素のJS + Supabase の実装（Gitタグ `legacy-vanilla-js` で参照できる。`git show legacy-vanilla-js:app.js` など）。
 「画面の見た目と操作は変えない」を原則とし、変えた点・追加した点・やめた点をすべて記す。
 
 ## 1. 同じもの（見た目・操作とも維持）
