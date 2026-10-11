@@ -16,3 +16,11 @@ supabase/functions/.env
 
 # ローカル用JWT署名鍵（秘密鍵。絶対にコミットしない）
 supabase/signing_keys.json
+
+# ビルド成果物・テスト結果
+dist/
+dist-e2e/
+playwright-report/
+test-results/
+coverage/
+*.tsbuildinfo
