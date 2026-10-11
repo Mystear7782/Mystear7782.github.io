@@ -46,6 +46,13 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // OAuth同意画面（oauth-consent.html/.js/.css）はService Workerを通さず、常にネットワークから取る。
+  // プリキャッシュに入れないだけでなく、実行時キャッシュにも残さない（認可リクエストごとに
+  // authorization_id が変わる画面で、古いコピーや別ユーザーの状態が使われるのを避けるため）。
+  if (isLocal && /\/oauth-consent\.(html|js|css)$/.test(url.pathname)) {
+    return;
+  }
+
   if (isPage) {
     e.respondWith(
       fetch(e.request).then(res => {

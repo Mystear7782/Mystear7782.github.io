@@ -3,6 +3,7 @@
 | バージョン | 日付 | 内容 |
 |---|---|---|
 | 1.0 | 2026-10-11 | 新規作成。フェーズ0（本番スキーマのマイグレーション化）とフェーズ1（制約・RPC・権限・menu_set_items.position）を反映 |
+| 1.1 | 2026-10-11 | フェーズ2: `sets.created_at` を追加（MCPの二重登録防止用）。MCPサーバーの設計は `mcp-design.md` を参照 |
 
 スキーマの正は `supabase/migrations/` のSQL。本書はその要約であり、食い違う場合はSQLが優先。
 
@@ -19,7 +20,7 @@
 |---|---|---|
 | `exercises` | `id` text | クライアントが `menu_<epoch ms>` 形式で採番。`id ~ '^[A-Za-z0-9_-]+$'` のCHECK。`user_id` default `auth.uid()`、`sort_order` でカテゴリ内の並び順 |
 | `workout_sessions` | `id` uuid | `exercise_id` → exercises（CASCADE）。`session_date` / `session_time`(text, 'HH:MM', 既定 '00:00') / `created_at` |
-| `sets` | `id` uuid | `session_id` → workout_sessions（CASCADE）。`unique(session_id, set_no)`、`weight_kg >= 0`、`reps > 0` |
+| `sets` | `id` uuid | `session_id` → workout_sessions（CASCADE）。`unique(session_id, set_no)`、`weight_kg >= 0`、`reps > 0`。`created_at`（既存行はセッションの作成時刻で補完。MCPの二重登録防止に使う） |
 | `cardio_logs` | `session_id` | workout_sessions と1対1（CASCADE） |
 | `body_weight_logs` | `id` uuid | 同日複数回の記録を許容（一意制約なし） |
 | `meal_logs` | `id` uuid | `meal_type` は 朝/昼/夜/間食 のCHECK。`calories_kcal` は生成列（P×4 + F×9 + C×4）で書き込まない |
@@ -67,3 +68,4 @@
 | `20261010153629_add_rpc_functions` | `record_set` と集計RPC3本の追加、デバッグ関数の削除（IF EXISTS） |
 | `20261010153632_tighten_privileges` | テーブル/RPC権限の最小化、ポリシーを `TO authenticated` に限定 |
 | `20261010153636_add_menu_set_items_position` | `menu_set_items.position` の追加 |
+| `20261010155612_add_sets_created_at` | `sets.created_at`（既存行はセッションの作成時刻で補完）とそのインデックス（フェーズ2） |
