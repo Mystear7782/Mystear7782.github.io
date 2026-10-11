@@ -2222,8 +2222,8 @@ function importCSV(input) {
           const realId = sessIdMap[csvSessId];
           const sess = S.sessions[menu.id][realId];
           try {
-            const setNo = sess.sets.length + 1;
-            const created = await SupaClient.sessions.addSet(realId, setNo, w, rep);
+            // フェーズ1でaddSetをrecord_set RPCに置き換えた際の取りこぼし。セッションIDを明示して追加する
+            const created = await SupaClient.sessions.recordSet({ sessionId: realId, w, r: rep });
             sess.sets.push({id:created.id, w, r:rep});
             imported++;
           } catch(e) { errors++; }
